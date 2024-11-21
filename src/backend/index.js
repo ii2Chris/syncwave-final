@@ -5,10 +5,17 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import {supabase} from './supabaseClient.js'
 
-// Now you can use the 'supabase' client directly
 
 dotenv.config(); // Load environment variables
 const app = express();
+// Start the server
+
+//const PORT = process.env.PORT || 5000;
+const PORT =  5000;
+
+//const PORT = import.meta.env.PORT || 5000
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 //const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
 // Middleware
@@ -52,12 +59,44 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-// Start the server
+//login route
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
 
-//const PORT = process.env.PORT || 5000;
-const PORT =  5000;
+  // Validate input
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required.' });
+  }
 
-//const PORT = import.meta.env.PORT || 5000
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+
+  try {
+    // Fetch user from Supabase by email
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, encrypted_password')  // Fetch necessary fields (make sure your table contains the right columns)
+      .eq('email', email)
+      .single();  // Since we're expecting one result (user)
+
+    if (error || !user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Compare the entered password with the stored hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.encrypted_password);
+
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Successful login
+    return res.status(200).json({ message: 'Login successful', userId: user.id });
+
+  } catch (error) {
+    console.error('Login Error:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 });

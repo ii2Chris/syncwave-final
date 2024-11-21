@@ -2,6 +2,8 @@ import React from 'react';
 import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { TextField, Button, Box, Typography, Alert } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+
 
 const Signup = () => {
   const {
@@ -9,6 +11,11 @@ const Signup = () => {
     handleSubmit,
     formState: { errors },
   } = useForm();
+  const navigate = useNavigate();
+
+  const handleLoginClick = () => {
+    navigate('/login'); // Navigate to /login when the button is clicked
+  };
 
   const onSubmit = (data) => {
     //console.log('Signup Data:', data);
@@ -57,7 +64,7 @@ const Signup = () => {
           helperText={errors.userName?.message}
         />
         
-        <TextField
+        <TextField 
           label="Email"
           type="email"
           fullWidth
@@ -119,6 +126,15 @@ const Signup = () => {
           Sign Up
         </Button>
 
+        <Button
+          variant="contained"
+          color="primary"
+          fullWidth
+          sx={{ mt: 2 }}
+          onClick={handleLoginClick}
+        >
+          Login
+        </Button>
       </form>
 
       {Object.keys(errors).length > 0 && (

@@ -1,20 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Signup from '../../components/signup';
+import Login from '../../components/login'; // Another component for login
+
 const App = () => {
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    // Fetch data from the Express API
-    axios.get('http://localhost:5000/api')
-      .then((response) => setMessage(response.data.message))
-      .catch((error) => console.error(error));
-  }, []);
-
   return (
-   <>
-   <Signup></Signup>
-   </>
+    <Router>
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    </Router>
   );
 };
 
