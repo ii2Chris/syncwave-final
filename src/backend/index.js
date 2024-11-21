@@ -3,14 +3,16 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
-import supabaseClient from './supabaseClient.js';  // Import the default export
-const { supabase, secret } = supabaseClient;      // Destructure the object
-import jwt from 'jsonwebtoken'; // Add this import to fix the issue
+import supabaseClient from './supabaseClient.js'; 
+const { supabase, secret } = supabaseClient;     
+import jwt from 'jsonwebtoken'; 
 
-
+//backend initalization
 dotenv.config(); // Load environment variables
 const app = express();
 const PORT = 5000;
+
+//middlewares 
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -91,9 +93,8 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Generate token after successful password match
-    const token = generateAccessToken(user.email); // Make sure the function is properly defined
-    console.log('Generated Token:', token);  // Log the token to confirm it is generated correctly
+    // Generate token after successful password match,session token, will be used in the authorization for any other api calls made
+    const token = generateAccessToken(user.email); 
 
     // Send response with token
     return res.status(200).json({

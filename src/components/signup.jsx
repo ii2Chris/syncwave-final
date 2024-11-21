@@ -18,8 +18,7 @@ const Signup = () => {
   };
 
   const onSubmit = (data) => {
-    //console.log('Signup Data:', data);
-    // Perform signup API call here
+    //signup API call here
     axios.post('http://localhost:5000/signup', data)
     .then((response) => {
       console.log('Signup success:', response.data);

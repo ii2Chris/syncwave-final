@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Signup from '../../components/signup';
-import Login from '../../components/login'; // Another component for login
+import Login from '../../components/login'; 
 
 const App = () => {
   return (

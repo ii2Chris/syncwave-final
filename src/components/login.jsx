@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const navigate = useNavigate();
+  
   const { register, handleSubmit, formState: { errors } } = useForm();
 
   const onSubmit = (data) => {
@@ -15,11 +16,9 @@ const Login = () => {
     })
     .then((response) => {
       console.log('Login successful:', response.data);  // Log the entire response object
-      const token = response.data.token;  // Ensure you're correctly accessing the token
-      console.log('Received Token:', token);  // Log the token to confirm it's being received
   
-      // You can store the token in localStorage or cookies here
-      localStorage.setItem('authToken', token);
+  //  storing  the token in localStorage or cookies here
+      localStorage.setItem('authToken', response.data.token);
   
       // You can then redirect or do something else with the token
     })
