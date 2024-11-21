@@ -3,29 +3,33 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
-import {supabase} from './supabaseClient.js'
+import supabaseClient from './supabaseClient.js';  // Import the default export
+const { supabase, secret } = supabaseClient;      // Destructure the object
+import jwt from 'jsonwebtoken'; // Add this import to fix the issue
 
 
 dotenv.config(); // Load environment variables
 const app = express();
-// Start the server
+const PORT = 5000;
 
-//const PORT = process.env.PORT || 5000;
-const PORT =  5000;
-
-//const PORT = import.meta.env.PORT || 5000
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-//const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// Example route
-app.get('/api', (req, res) => {
-  res.json({ message: 'Welcome to the Express backend!' });
+
+
+// Function to generate a JWT access token
+function generateAccessToken(username) {
+  return jwt.sign({ username }, secret, { expiresIn: '1800s' });
+}
+
+app.listen(PORT, () => {
+  console.log(`list4ning on http://localhost:${PORT}`);
 });
+
+//universal route
+app.get("/:universalURL",(req,res)=>{
+  res.send("404 URL NOT FOUND");
+})
 
 // Signup route
 app.post('/signup', async (req, res) => {
@@ -59,7 +63,7 @@ app.post('/signup', async (req, res) => {
   }
 });
 
-//login route
+// Login route with JWT session token
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -68,12 +72,11 @@ app.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
-
   try {
     // Fetch user from Supabase by email
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, encrypted_password')  // Fetch necessary fields (make sure your table contains the right columns)
+      .select('id, email, encrypted_password')  // Fetch necessary fields
       .eq('email', email)
       .single();  // Since we're expecting one result (user)
 
@@ -84,13 +87,20 @@ app.post('/login', async (req, res) => {
     // Compare the entered password with the stored hashed password
     const isPasswordValid = await bcrypt.compare(password, user.encrypted_password);
 
-
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Successful login
-    return res.status(200).json({ message: 'Login successful', userId: user.id });
+    // Generate token after successful password match
+    const token = generateAccessToken(user.email); // Make sure the function is properly defined
+    console.log('Generated Token:', token);  // Log the token to confirm it is generated correctly
+
+    // Send response with token
+    return res.status(200).json({
+      message: 'Login successful',
+      token: token,  // Include the token in the response
+      userId: user.id,
+    });
 
   } catch (error) {
     console.error('Login Error:', error);
@@ -98,5 +108,3 @@ app.post('/login', async (req, res) => {
   }
 });
 
-
-});

@@ -2,28 +2,32 @@ import React from 'react';
 import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { TextField, Button, Box, Typography, Alert } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-  const {
-    register, // Use 'register' here
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
+  const navigate = useNavigate();
+  const { register, handleSubmit, formState: { errors } } = useForm();
 
-  
   const onSubmit = (data) => {
-    // Perform login API call here
-    axios
-      .post('http://localhost:5000/login', data) // Use POST instead of GET
-      .then((response) => {
-        console.log('Login success:', response.data);
-        // Handle success (e.g., show a success message or redirect user)
-      })
-      .catch((error) => {
-        console.error('Login error:', error.response?.data || error.message);
-        // Handle error (e.g., show an error message)
-      });
+    axios.post('http://localhost:5000/login', {
+      email: data.email,
+      password: data.password,
+    })
+    .then((response) => {
+      console.log('Login successful:', response.data);  // Log the entire response object
+      const token = response.data.token;  // Ensure you're correctly accessing the token
+      console.log('Received Token:', token);  // Log the token to confirm it's being received
+  
+      // You can store the token in localStorage or cookies here
+      localStorage.setItem('authToken', token);
+  
+      // You can then redirect or do something else with the token
+    })
+    .catch((error) => {
+      console.error('Login error:', error.response?.data || error.message);
+    });
   };
+  
 
   return (
     <Box
@@ -41,9 +45,9 @@ const Login = () => {
         Login
       </Typography>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        
-        <TextField 
+      <form onSubmit={handleSubmit(onSubmit)} method="POST">
+
+        <TextField
           label="Email"
           type="email"
           fullWidth
@@ -84,6 +88,7 @@ const Login = () => {
         >
           Login
         </Button>
+
       </form>
 
       {Object.keys(errors).length > 0 && (
