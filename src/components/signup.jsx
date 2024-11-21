@@ -11,9 +11,17 @@ const Signup = () => {
   } = useForm();
 
   const onSubmit = (data) => {
-    console.log('Signup Data:', data);
+    //console.log('Signup Data:', data);
     // Perform signup API call here
-    axios.get('http://localhost:5000/signup')
+    axios.post('http://localhost:5000/signup', data)
+    .then((response) => {
+      console.log('Signup success:', response.data);
+      // Handle success (e.g., show a success message or redirect user)
+    })
+    .catch((error) => {
+      console.error('Signup error:', error.response?.data || error.message);
+      // Handle error (e.g., show an error message)
+    });
   };
 
   return (
@@ -37,7 +45,14 @@ const Signup = () => {
           label="User Name"
           fullWidth
           sx={{ mb: 2 }}
-          {...register('userName', { required: 'UserName is required' })}
+          
+          {...register('userName', { 
+            required: 'UserName is required', 
+            maxLength: {
+              value: 10,
+              message: 'User Name cannot be longer than 10 characters'
+            }
+          })}
           error={!!errors.userName}
           helperText={errors.userName?.message}
         />

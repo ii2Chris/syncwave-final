@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import {supabase} from './supabaseClient.js'
 
+// Now you can use the 'supabase' client directly
+
 dotenv.config(); // Load environment variables
 const app = express();
 //const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
@@ -52,8 +54,8 @@ app.post('/signup', async (req, res) => {
 
 // Start the server
 
-const PORT = process.env.PORT || 5000;
-//const PORT =  5000;
+//const PORT = process.env.PORT || 5000;
+const PORT =  5000;
 
 //const PORT = import.meta.env.PORT || 5000
 app.listen(PORT, () => {
