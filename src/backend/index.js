@@ -96,6 +96,14 @@ app.post('/login', async (req, res) => {
     // Generate token after successful password match,session token, will be used in the authorization for any other api calls made
     const token = generateAccessToken(user.email); 
 
+    const { error: updateError } = await supabase
+    .from('users')
+    .update({ session_token: token }) // Assuming `session_token` is a column in the `users` table
+    .eq('id', user.id);
+
+  if (updateError) {
+    throw updateError;}
+
     // Send response with token
     return res.status(200).json({
       message: 'Login successful',
