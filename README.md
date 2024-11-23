@@ -1,10 +1,10 @@
 # React + Vite
 
-#How to start the backend
+# How to start the backend
 - cd backend
 - node index.js
 
-  #How to start the frontend
+  # How to start the frontend
   - cd frontend
   - npm install
   - npm run dev
