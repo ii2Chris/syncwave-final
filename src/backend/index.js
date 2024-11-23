@@ -21,7 +21,9 @@ app.use(bodyParser.json());
 
 // Function to generate a JWT access token
 function generateAccessToken(username) {
-  return jwt.sign({ username }, secret, { expiresIn: '1800s' });
+  return jwt.sign({ username, iat: Math.floor(Date.now() / 1000) }, 
+  secret, 
+  { expiresIn: '1800s' });
 }
 
 app.listen(PORT, () => {
@@ -37,9 +39,10 @@ app.get("/:universalURL",(req,res)=>{
 app.post('/signup', async (req, res) => {
   const { email, password, dateOfBirth, userName, phoneNumber } = req.body;
 
-  if (!email || !password || !dateOfBirth || !userName || !phoneNumber) {
+  if ([email, password, dateOfBirth, userName, phoneNumber].some(field => !field)) {
     return res.status(400).json({ error: 'All fields are required.' });
   }
+  
 
   try {
     const passwordHash = await bcrypt.hash(password, 10);
@@ -96,13 +99,12 @@ app.post('/login', async (req, res) => {
     // Generate token after successful password match,session token, will be used in the authorization for any other api calls made
     const token = generateAccessToken(user.email); 
 
-    const { error: updateError } = await supabase
-    .from('users')
-    .update({ session_token: token }) // Assuming `session_token` is a column in the `users` table
-    .eq('id', user.id);
+    const { tokenerror } = await supabase
+  .from('users')
+  .update({ session_token: token })
+  .eq('id', user.id);
 
-  if (updateError) {
-    throw updateError;}
+  tokenerror  ? console.error('Update Error:', tokenerror.message) : console.log('Session token updated successfully!');
 
     // Send response with token
     return res.status(200).json({
