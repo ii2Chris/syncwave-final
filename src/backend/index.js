@@ -5,8 +5,10 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import supabaseClient from './supabaseClient.js';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
 
 const { supabase, secret } = supabaseClient; // Supabase client setup
+
 dotenv.config(); // Load environment variables
 
 const app = express();
@@ -303,52 +305,85 @@ app.get('/potential-matches/:eventId', async (req, res) => {
 
     const swipedUserIds = existingSwipes?.map(swipe => swipe.swiped_user_id) || [];
 
-    // Get all users in the pool for this event except the current user
-    // and excluding already swiped users
-    const { data: poolUsers, error: poolError } = await supabase
-      .from('matchmake_pool')
-      .select(`
-        id,
-        joined_at,
-        user-id,
-        users!inner (
-          id,
-          username
-        ),
-        user_profile!inner (
-          favourite_artist,
-          rating,
-          profile_url,
-          gender,
-          age
-        )
-      `)
-      .eq('event_id', eventId)
-      .neq('user-id', userId)
-      .not('user-id', 'in', `(${swipedUserIds.join(',')})`);
+//     // Get all users in the pool for this event except the current user
+//     // and excluding already swiped users
+const { data: poolUsers, error: poolError } = await supabase
+  .from('matchmake_pool')
+  .select(`
+    id,
+    joined_at,
+    user-id,
+    users!inner (
+      id,
+      username
+    )
+  `)
+  .eq('event_id', eventId)
+  .neq('user-id', userId)
+  .not('user-id', 'in', `(${swipedUserIds.join(',')})`);
 
-    if (poolError) {
-      console.error('Error fetching pool users:', poolError);
-      return res.status(500).json({ error: 'Failed to retrieve potential matches' });
-    }
+if (poolError) {
+  console.error('Error fetching pool users:', poolError);
+  return res.status(500).json({ error: 'Failed to retrieve potential matches' });
+}
 
-    // Format the response
-    const formattedMatches = poolUsers.map(match => ({
-      matchId: match.id,
-      userId: match.users.id,
-      username: match.users.username,
-      profilePicture: match.user_profile.profile_url,
-      favouriteArtists: match.user_profile.favourite_artist,
-      rating: match.user_profile.rating,
-      gender: match.user_profile.gender,
-      age: match.user_profile.age,
-      joinedAt: match.joined_at
-    }));
+// Format the response
+const formattedMatches = poolUsers.map(match => ({
+  matchId: match.id,
+  userId: match.users.id,
+  username: match.users.username,
+  joinedAt: match.joined_at,
+}));
 
-    res.status(200).json({
-      eventId,
-      matches: formattedMatches
-    });
+res.status(200).json({
+  eventId,
+  matches: formattedMatches,
+});
+
+//     const { data: poolUsers, error: poolError } = await supabase
+//       .from('matchmake_pool')
+//       .select(`
+//         id,
+//         joined_at,
+//         user-id,
+//         users!inner (
+//           id,
+//           username
+//         ),
+//         user_profile!inner (
+//           favourite_artist,
+//           rating,
+//           profile_url,
+//           gender,
+//           age
+//         )
+//       `)
+//       .eq('event_id', eventId)
+//       .neq('user-id', userId)
+//       .not('user-id', 'in', `(${swipedUserIds.join(',')})`);
+
+//     if (poolError) {
+//       console.error('Error fetching pool users:', poolError);
+//       return res.status(500).json({ error: 'Failed to retrieve potential matches' });
+//     }
+
+//     // Format the response
+//     const formattedMatches = poolUsers.map(match => ({
+//       matchId: match.id,
+//       userId: match.users.id,
+//       username: match.users.username,
+//       profilePicture: match.user_profile.profile_url,
+//       favouriteArtists: match.user_profile.favourite_artist,
+//       rating: match.user_profile.rating,
+//       gender: match.user_profile.gender,
+//       age: match.user_profile.age,
+//       joinedAt: match.joined_at
+//     }));
+
+//     res.status(200).json({
+//       eventId,
+//       matches: formattedMatches
+//     });
 
   } catch (error) {
     console.error('Error retrieving potential matches:', error.message || error);
@@ -452,6 +487,63 @@ app.post('/swipe', async (req, res) => {
   }
 });
 
+
+//const storage = multer.memoryStorage();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024 // Example: 5MB limit
+  }
+});
+// Endpoint to upload image to Supabase .ex user profile
+app.post('/upload', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    console.log('No file received');
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const fileName = `${Date.now()}_${req.file.originalname}`;
+  const filePath = `profile-pictures/${fileName}`;
+
+  try {
+    console.log('Attempting upload with:', {
+      fileName,
+      filePath,
+      mimeType: req.file.mimetype,
+      fileSize: req.file.size
+    });
+
+    const { data, error } = await supabase.storage
+      .from('profile-pictures')
+      .upload(filePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log('Upload successful:', data);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('profile-pictures')
+      .getPublicUrl(filePath);
+
+    console.log('Generated public URL:', publicUrl);
+
+    res.json({ url: publicUrl });
+
+  } catch (err) {
+    console.error('Detailed error:', {
+      message: err.message,
+      stack: err.stack,
+      details: err
+    });
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Universal 404 route (placed at the end of the routes)
 

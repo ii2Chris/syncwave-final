@@ -56,6 +56,7 @@ const Dashboard = () => {
         ...prev,
         [eventId]: response.data.matches
       }));
+      console.log(response)
       setMatchError(null);
     } catch (error) {
       console.error('Error fetching matches:', error.response?.data || error.message);
@@ -124,11 +125,17 @@ const Dashboard = () => {
   };
 
 
- const renderMatches = (eventId) => {
+  const renderMatches = (eventId) => {
     const matches = potentialMatches[eventId] || [];
-    
-    if (matches.length === 0) return null;
-
+  
+    if (matches.length === 0) {
+      return (
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+          No potential matches found for this event.
+        </Typography>
+      );
+    }
+  
     const calculateAge = (birthDate) => {
       const today = new Date();
       const birth = new Date(birthDate);
@@ -139,61 +146,45 @@ const Dashboard = () => {
       }
       return age;
     };
-
+  
     return (
       <Box sx={{ mt: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Potential Matches:</Typography>
+        <Typography variant="h6" sx={{ mb: 2 }}>
+          Potential Matches:
+        </Typography>
         <Grid container spacing={2}>
           {matches.map((match) => (
-            <Grid item xs={12} sm={6} key={match.userId}>
+            <Grid item xs={12} sm={6} md={4} key={match.id}>
               <Card>
                 <CardMedia
                   component="img"
                   height="200"
-                  image={match.profilePicture || '/default-avatar.png'}
+                  image="/default-avatar.png" // Default avatar placeholder
                   alt={match.username}
                 />
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     {match.username}
                   </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Age: {calculateAge(match.date_of_birth)}
+                  </Typography>
+                  {match.email && (
                     <Typography variant="body2" color="text.secondary">
-                      {calculateAge(match.age)} • {match.gender}
+                      Email: {match.email}
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <StarIcon sx={{ color: 'gold', mr: 0.5 }} />
-                      <Typography variant="body2">{match.rating.toFixed(1)}</Typography>
-                    </Box>
-                  </Stack>
-                  {match.favouriteArtists && match.favouriteArtists.length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Favorite Artists:
-                      </Typography>
-                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        {match.favouriteArtists.map((artist, index) => (
-                          <Chip 
-                            key={index} 
-                            label={artist} 
-                            size="small" 
-                            sx={{ mb: 1 }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
                   )}
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'space-around' }}>
-                  <IconButton 
-                    onClick={() => handleSwipe(eventId, match.userId, 'left')}
+                <CardActions sx={{ justifyContent: 'space-between' }}>
+                  <IconButton
+                    onClick={() => handleSwipe(eventId, match.id, 'left')}
                     color="error"
                     size="large"
                   >
                     <ThumbDownIcon />
                   </IconButton>
-                  <IconButton 
-                    onClick={() => handleSwipe(eventId, match.userId, 'right')}
+                  <IconButton
+                    onClick={() => handleSwipe(eventId, match.id, 'right')}
                     color="success"
                     size="large"
                   >
@@ -207,11 +198,11 @@ const Dashboard = () => {
       </Box>
     );
   };
-
+  
   return (
     <Box
       sx={{
-        maxWidth: 1200, // Increased to accommodate matches
+        maxWidth: 1200,
         margin: 'auto',
         mt: 5,
         p: 3,
@@ -223,7 +214,7 @@ const Dashboard = () => {
       <Typography variant="h4" component="h1" sx={{ mb: 3 }} align="center">
         Dashboard
       </Typography>
-
+  
       <Button
         onClick={fetchEvents}
         variant="outlined"
@@ -233,31 +224,31 @@ const Dashboard = () => {
       >
         Find Events
       </Button>
-
+  
       {fetchError && (
         <Alert severity="error" sx={{ mt: 2 }}>
           {fetchError}
         </Alert>
       )}
-
+  
       {joinError && (
         <Alert severity="error" sx={{ mt: 2 }}>
           {joinError}
         </Alert>
       )}
-
+  
       {matchError && (
         <Alert severity="error" sx={{ mt: 2 }}>
           {matchError}
         </Alert>
       )}
-
+  
       {successMessage && (
         <Alert severity="success" sx={{ mt: 2 }}>
           {successMessage}
         </Alert>
       )}
-
+  
       {events.length > 0 && (
         <Box sx={{ mt: 3 }}>
           <Typography variant="h6">Events:</Typography>
@@ -288,6 +279,6 @@ const Dashboard = () => {
       )}
     </Box>
   );
-};
+};  
 
 export default Dashboard;
