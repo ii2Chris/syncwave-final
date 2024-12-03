@@ -1,66 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { 
   Box, 
   Typography, 
   Button, 
-  Alert,
-  Card,
-  CardContent,
-  CardMedia,
-  CardActions,
-  Grid,
-  IconButton,
-  Chip,
-  Stack
+  Alert, 
+  Card, 
+  CardContent, 
+  CardMedia, 
+  CardActions, 
+  Grid, 
+  IconButton, 
+  Skeleton 
 } from '@mui/material';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
-import StarIcon from '@mui/icons-material/Star';
+
 
 const Dashboard = () => {
-  const [events, setEvents] = useState([]); 
+  const [events, setEvents] = useState([]);
   const [fetchError, setFetchError] = useState(null);
   const [joinError, setJoinError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [potentialMatches, setPotentialMatches] = useState({});
   const [matchError, setMatchError] = useState(null);
-
-  
+  const [isLoading, setIsLoading] = useState(false);
+  const swipeCooldown = useRef(false);
 
   const fetchEvents = () => {
+    setIsLoading(true);
     axios
       .get('http://localhost:5000/event')
       .then((response) => {
-        console.log('Events fetched:', response.data);
         setEvents(response.data.events || []);
         setFetchError(null);
       })
       .catch((error) => {
         console.error('Error fetching events:', error.response?.data || error.message);
         setFetchError('Failed to fetch events. Try again later.');
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 
   const fetchPotentialMatches = async (eventId) => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/potential-matches/${eventId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-          },
-        }
-      );
-      setPotentialMatches(prev => ({
+      const response = await axios.get(`http://localhost:5000/potential-matches/${eventId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+      });
+      setPotentialMatches((prev) => ({
         ...prev,
-        [eventId]: response.data.matches
+        [eventId]: response.data.matches,
       }));
-      console.log(response)
       setMatchError(null);
     } catch (error) {
       console.error('Error fetching matches:', error.response?.data || error.message);
-      if (error.response?.status !== 403) { // Don't show error if user hasn't joined pool
+      if (error.response?.status !== 403) {
         setMatchError('Failed to fetch potential matches.');
       }
     }
@@ -68,22 +64,18 @@ const Dashboard = () => {
 
   const joinMatchmake = async (event) => {
     try {
-      const response = await axios.post(
+      await axios.post(
         'http://localhost:5000/matchmake',
         { eventId: event.id },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         }
       );
       setSuccessMessage(`Successfully joined matchmaking for ${event.name}`);
       setJoinError(null);
-      // Fetch matches immediately after joining
       fetchPotentialMatches(event.id);
     } catch (error) {
       if (error.response?.status === 400) {
-        // If user is already in pool, fetch matches anyway
         fetchPotentialMatches(event.id);
       } else {
         console.error('Error joining matchmaking:', error.response?.data || error.message);
@@ -92,50 +84,37 @@ const Dashboard = () => {
     }
   };
 
-  // Handle user swipe/match actions
   const handleSwipe = async (eventId, matchUserId, direction) => {
+    if (swipeCooldown.current) return;
+    swipeCooldown.current = true;
+
     try {
       const response = await axios.post(
-        'http://localhost:5000/swipe',
+        `http://localhost:5000/swipe`,
+        { eventId, matchUserId, direction },
         {
-          eventId,
-          matchUserId,
-          direction
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-          },
+          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
         }
       );
-      
-      setPotentialMatches(prev => ({
+
+      setPotentialMatches((prev) => ({
         ...prev,
-        [eventId]: prev[eventId].filter(match => match.userId !== matchUserId)
+        [eventId]: prev[eventId].filter((match) => match.userId !== matchUserId),
       }));
 
-      // Show match notification if it's a match
       if (response.data.matched) {
         setSuccessMessage("It's a match! 🎉");
       }
     } catch (error) {
       console.error('Error recording swipe:', error);
       setJoinError('Failed to record swipe. Please try again.');
+    } finally {
+      swipeCooldown.current = false;
     }
   };
 
-
   const renderMatches = (eventId) => {
     const matches = potentialMatches[eventId] || [];
-  
-    if (matches.length === 0) {
-      return (
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-          No potential matches found for this event.
-        </Typography>
-      );
-    }
-  
     const calculateAge = (birthDate) => {
       const today = new Date();
       const birth = new Date(birthDate);
@@ -146,7 +125,15 @@ const Dashboard = () => {
       }
       return age;
     };
-  
+
+    if (matches.length === 0) {
+      return (
+        <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
+          No potential matches found for this event.
+        </Typography>
+      );
+    }
+
     return (
       <Box sx={{ mt: 2 }}>
         <Typography variant="h6" sx={{ mb: 2 }}>
@@ -159,32 +146,33 @@ const Dashboard = () => {
                 <CardMedia
                   component="img"
                   height="200"
-                  image="/default-avatar.png" // Default avatar placeholder
-                  alt={match.username}
+                  image={match.profilePicture || 'https://via.placeholder.com/https://ljernclsjawvxrelmufg.supabase.co/storage/v1/object/public/profile-pictures/profile-pictures/1732933263192_stage-backdrop-syncwave.webp150'}
+                  alt={match.matchId}
                 />
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    {match.username}
+                   Username: {match.username}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Age: {calculateAge(match.date_of_birth)}
                   </Typography>
-                  {match.email && (
-                    <Typography variant="body2" color="text.secondary">
-                      Email: {match.email}
-                    </Typography>
-                  )}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Rating: {match.rating}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Gender: {match.gender}
+                  </Typography>
                 </CardContent>
                 <CardActions sx={{ justifyContent: 'space-between' }}>
                   <IconButton
-                    onClick={() => handleSwipe(eventId, match.id, 'left')}
+                    onClick={() => handleSwipe(eventId, match.matchId, 'left')}
                     color="error"
                     size="large"
                   >
                     <ThumbDownIcon />
                   </IconButton>
                   <IconButton
-                    onClick={() => handleSwipe(eventId, match.id, 'right')}
+                    onClick={() => handleSwipe(eventId, match.matchId, 'right')}
                     color="success"
                     size="large"
                   >
@@ -198,7 +186,7 @@ const Dashboard = () => {
       </Box>
     );
   };
-  
+
   return (
     <Box
       sx={{
@@ -214,7 +202,7 @@ const Dashboard = () => {
       <Typography variant="h4" component="h1" sx={{ mb: 3 }} align="center">
         Dashboard
       </Typography>
-  
+
       <Button
         onClick={fetchEvents}
         variant="outlined"
@@ -224,31 +212,13 @@ const Dashboard = () => {
       >
         Find Events
       </Button>
-  
-      {fetchError && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {fetchError}
-        </Alert>
-      )}
-  
-      {joinError && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {joinError}
-        </Alert>
-      )}
-  
-      {matchError && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {matchError}
-        </Alert>
-      )}
-  
-      {successMessage && (
-        <Alert severity="success" sx={{ mt: 2 }}>
-          {successMessage}
-        </Alert>
-      )}
-  
+
+      {isLoading && <Skeleton variant="rectangular" width="100%" height={50} sx={{ mt: 2 }} />}
+      {fetchError && <Alert severity="error" sx={{ mt: 2 }}>{fetchError}</Alert>}
+      {joinError && <Alert severity="error" sx={{ mt: 2 }}>{joinError}</Alert>}
+      {matchError && <Alert severity="error" sx={{ mt: 2 }}>{matchError}</Alert>}
+      {successMessage && <Alert severity="success" sx={{ mt: 2 }}>{successMessage}</Alert>}
+
       {events.length > 0 && (
         <Box sx={{ mt: 3 }}>
           <Typography variant="h6">Events:</Typography>
@@ -263,7 +233,7 @@ const Dashboard = () => {
               }}
             >
               <Typography variant="subtitle1">{event.name}</Typography>
-              <Typography variant="body2">{event.dates?.start?.localDate}</Typography>
+              <Typography variant="body2">{event.date}</Typography>
               <Button
                 onClick={() => joinMatchmake(event)}
                 variant="contained"
@@ -279,6 +249,6 @@ const Dashboard = () => {
       )}
     </Box>
   );
-};  
+};
 
 export default Dashboard;
