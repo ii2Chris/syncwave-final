@@ -86,10 +86,10 @@ router.post('/matchmake', async (req, res) => {
         error: 'Failed to join matchmaking pool. Please try again later.' 
       });
     }
-  });
+});
 
 
-  router.get('/potential-matches/:eventId', async (req, res) => {
+router.get('/potential-matches/:eventId', async (req, res) => {
     const { eventId } = req.params;
   
     try {
@@ -125,7 +125,7 @@ router.post('/matchmake', async (req, res) => {
         .from('matchmake_pool')
         .select('id')
         .eq('event_id', eventId)
-        .eq('user_id', userId) // Fixed column name
+        .eq('user_id', userId)
         .single();
   
       if (poolCheckError) {
@@ -154,56 +154,57 @@ router.post('/matchmake', async (req, res) => {
       const swipedUserIds = existingSwipes?.map((swipe) => swipe.swiped_user_id) || [];
   
       // Retrieve potential matches from the matchmaking pool
-const { data: poolUsers, error: poolError } = await supabase
-  .from('matchmake_pool')
-  .select(
-    `
-      id,
-      joined_at,
-      user_id,
-      users:users(id, username), 
-      user_profile:user_profiles(favourite_artist, rating, profile_url, gender, age)
-    `
-  )
-  .eq('event_id', eventId)
-  .neq('user_id', userId)  
-  .not('user_id', 'in', `(${swipedUserIds.join(',')})`); 
+      const { data: poolUsers, error: poolError } = await supabase
+        .from('matchmake_pool')
+        .select(`
+          id,
+          joined_at,
+          user_id,
+          users:users(id, username), 
+          user_profile:user_profiles(favourite_artist, rating, profile_url, gender, age)
+        `)
+        .eq('event_id', eventId)
+        .neq('user_id', userId)  
+        .not('user_id', 'in', `(${swipedUserIds.join(',')}))`); 
 
-if (poolError) {
-  console.error('Error fetching pool users:', poolError);
-  return res.status(500).json({ error: 'Failed to retrieve potential matches' });
-}
+      if (poolError) {
+        console.error('Error fetching pool users:', poolError);
+        return res.status(500).json({ error: 'Failed to retrieve potential matches' });
+      }
 
-// Log the poolUsers to debug data
-console.log('Fetched poolUsers:', poolUsers);
+      // Log the poolUsers to debug data
+      console.log('Fetched poolUsers:', poolUsers);
 
-// Format the response
-const formattedMatches = poolUsers.map((match) => {
-  // Log individual match data to debug
-  console.log('Match Data:', match);
+      // Format the response
+      const formattedMatches = poolUsers.map((match) => {
+        // Log individual match data to debug
+        console.log('Match Data:', match);
 
-  return {
-    matchId: match.id, // Ensure this is the correct match id
-    userId: match.users.id, // Ensure users.id is being correctly selected
-    username: match.users.username,
-    profilePicture: match.user_profile.profile_url,
-    favouriteArtists: match.user_profile.favourite_artist,
-    rating: match.user_profile.rating,
-    gender: match.user_profile.gender,
-    age: match.user_profile.age,
-    joinedAt: match.joined_at,
-  };
-});
+        return {
+          matchId: match.id,
+          userId: match.users.id,
+          username: match.users.username,
+          profilePicture: match.user_profile.profile_url,
+          favouriteArtists: match.user_profile.favourite_artist,
+          rating: match.user_profile.rating,
+          gender: match.user_profile.gender,
+          age: match.user_profile.age,
+          joinedAt: match.joined_at,
+        };
+      });
 
-res.status(200).json({
-  eventId,
-  matches: formattedMatches,
-});
+      res.status(200).json({
+        eventId,
+        matches: formattedMatches,
+      });
+    } catch (error) {
+      console.error('Error fetching potential matches:', error);
+      res.status(500).json({ error: 'Failed to retrieve potential matches' });
+    }
+}); // Added missing closing bracket here
 
 
-  
-
-  router.post('/swipe', async (req, res) => {
+router.post('/swipe', async (req, res) => {
     const { eventId, matchUserId, direction } = req.body;
     if (!matchUserId) {
       return res.status(400).json({ error: 'matchUserId is required' });
@@ -247,8 +248,7 @@ res.status(200).json({
       }
 
       // Log MatchUserId
-    console.log('Match User ID before insert:', matchUserId);
-
+      console.log('Match User ID before insert:', matchUserId);
   
       // Record the swipe action
       const { error: swipeError } = await supabase
@@ -306,7 +306,6 @@ res.status(200).json({
       console.error('Error processing swipe:', error);
       res.status(500).json({ error: 'Failed to process swipe' });
     }
-  });
-  
+});
 
 export default router;
