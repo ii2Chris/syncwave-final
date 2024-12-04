@@ -1,7 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
-import supabaseClient from './supabaseClient';
+import supabaseClient from './supabaseClient.js';
 
 const { supabase, secret } = supabaseClient;
 const router = express.Router();
