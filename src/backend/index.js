@@ -3,9 +3,9 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-import authRoutes from './routes/authRoutes.js';
-import eventRoutes from './routes/eventRoutes.js';
-import matchRoutes from './routes/matchRoutes.js';
+import authRoutes from './authRoutes.js';
+import eventRoutes from './eventRoutes.js';
+import matchRoutes from './matchRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
 
 dotenv.config();
