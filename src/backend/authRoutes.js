@@ -1,7 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import supabaseClient from '../supabaseClient.js';
+import supabaseClient from './supabaseClient';
 
 const { supabase, secret } = supabaseClient;
 const router = express.Router();
