@@ -18,10 +18,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Use routes
-app.use('/auth', authRoutes);
-app.use('/events', eventRoutes);
-app.use('/matches', matchRoutes);
-app.use('/upload',uploadRoutes);
+app.use('/', authRoutes);
+app.use('/', eventRoutes);
+app.use('/', matchRoutes);
+app.use('/',uploadRoutes);
 
 // Start server
 app.listen(PORT, () => {

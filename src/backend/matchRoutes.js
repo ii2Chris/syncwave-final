@@ -154,23 +154,48 @@ router.get('/potential-matches/:eventId', async (req, res) => {
       const swipedUserIds = existingSwipes?.map((swipe) => swipe.swiped_user_id) || [];
   
       // Retrieve potential matches from the matchmaking pool
-      const { data: poolUsers, error: poolError } = await supabase
-        .from('matchmake_pool')
-        .select(`
-          id,
-          joined_at,
-          user_id,
-          users:users(id, username), 
-          user_profile:user_profiles(favourite_artist, rating, profile_url, gender, age)
-        `)
-        .eq('event_id', eventId)
-        .neq('user_id', userId)  
-        .not('user_id', 'in', `(${swipedUserIds.join(',')}))`); 
+      // const { data: poolUsers, error: poolError } = await supabase
+      //   .from('matchmake_pool')
+      //   .select(`
+      //     id,
+      //     joined_at,
+      //     user_id,
+      //     users:users(id, username), 
+      //     user_profile:user_profile(favourite_artist, rating, profile_url, gender, age)
+      //   `)
+      //   .eq('event_id', eventId)
+      //   .neq('user_id', userId)  
+      //   .not('user_id', 'in', `(${swipedUserIds.join(',')}))`); 
 
-      if (poolError) {
-        console.error('Error fetching pool users:', poolError);
-        return res.status(500).json({ error: 'Failed to retrieve potential matches' });
-      }
+      // if (poolError) {
+      //   console.error('Error fetching pool users:', poolError);
+      //   return res.status(500).json({ error: 'Failed to retrieve potential matches' });
+      // }
+
+           const { data: poolUsers, error: poolError } = await supabase
+       .from('matchmake_pool')
+       .select(`
+         id,
+         joined_at,
+         user_id,
+         
+         user_profile!inner (
+          id,
+          username,
+           favourite_artist,
+           rating,
+           profile_url,
+           gender,
+           age
+         )
+       `)
+       .eq('event_id', eventId)
+       .neq('user_id', userId)
+       .not('user_id', 'in', `(${swipedUserIds.join(',')})`);
+     if (poolError) {
+       console.error('Error fetching pool users:', poolError);
+       return res.status(500).json({ error: 'Failed to retrieve potential matches' });
+    }
 
       // Log the poolUsers to debug data
       console.log('Fetched poolUsers:', poolUsers);

@@ -57,10 +57,29 @@ router.post('/login', async (req, res) => {
     }
 
     const token = generateAccessToken(user);
-    res.status(200).json({ message: 'Login successful', token, userId: user.id });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error.' });
+    const { error: tokenError } = await supabase
+    .from('users')
+    .update({
+      session_token: token,
+      last_sign_in_at: new Date().toISOString(),
+    })
+    .eq('id', user.id);
+
+  if (tokenError) {
+    console.error('Token Update Error:', tokenError.message);
+    return res.status(500).json({ error: 'Failed to update session token.' });
   }
+
+  res.status(200).json({
+    message: 'Login successful',
+    token,
+    userId: user.id,
+    lastSignIn: new Date().toISOString(),
+  });
+} catch (error) {
+  console.error('Login Error:', error.message || error);
+  res.status(500).json({ error: 'Server error.' });
+}
 });
 
 export default router;
