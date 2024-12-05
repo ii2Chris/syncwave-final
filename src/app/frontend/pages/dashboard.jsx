@@ -1,252 +1,271 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Alert, 
-  Card, 
-  CardContent, 
-  CardMedia, 
-  CardActions, 
-  Grid, 
-  IconButton, 
-  Skeleton 
+import {
+  Box,
+  Typography,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Button,
+  IconButton,
 } from '@mui/material';
-import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import ThumbDownIcon from '@mui/icons-material/ThumbDown';
-
+import MenuIcon from '@mui/icons-material/Menu';
+import PersonIcon from '@mui/icons-material/Person';
+import ChatIcon from '@mui/icons-material/Chat';
+import PeopleIcon from '@mui/icons-material/People';
+import EventIcon from '@mui/icons-material/Event';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
-  const [fetchError, setFetchError] = useState(null);
-  const [joinError, setJoinError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
-  const [potentialMatches, setPotentialMatches] = useState({});
-  const [matchError, setMatchError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const swipeCooldown = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const fetchEvents = () => {
-    setIsLoading(true);
-    axios
-      .get('http://localhost:5000/event')
-      .then((response) => {
-        setEvents(response.data.events || []);
-        setFetchError(null);
-      })
-      .catch((error) => {
-        console.error('Error fetching events:', error.response?.data || error.message);
-        setFetchError('Failed to fetch events. Try again later.');
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
-
-  const fetchPotentialMatches = async (eventId) => {
-    try {
-      const response = await axios.get(`http://localhost:5000/potential-matches/${eventId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-      });
-      setPotentialMatches((prev) => ({
-        ...prev,
-        [eventId]: response.data.matches,
-      }));
-      setMatchError(null);
-    } catch (error) {
-      console.error('Error fetching matches:', error.response?.data || error.message);
-      if (error.response?.status !== 403) {
-        setMatchError('Failed to fetch potential matches.');
-      }
+  // Authentication check
+  useEffect(() => {
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      navigate('/login');
     }
-  };
+  }, [navigate]);
 
-  const joinMatchmake = async (event) => {
+  // Fetch events
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
     try {
-      await axios.post(
-        'http://localhost:5000/matchmake',
-        { eventId: event.id },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-        }
-      );
-      setSuccessMessage(`Successfully joined matchmaking for ${event.name}`);
-      setJoinError(null);
-      fetchPotentialMatches(event.id);
+      const response = await axios.get('http://localhost:5000/event', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      setEvents(response.data.events || []);
+      setError(null);
     } catch (error) {
-      if (error.response?.status === 400) {
-        fetchPotentialMatches(event.id);
-      } else {
-        console.error('Error joining matchmaking:', error.response?.data || error.message);
-        setJoinError('Failed to join matchmaking. Try again later.');
-      }
-    }
-  };
-
-  const handleSwipe = async (eventId, matchUserId, direction) => {
-    if (swipeCooldown.current) return;
-    swipeCooldown.current = true;
-
-    try {
-      const response = await axios.post(
-        `http://localhost:5000/swipe`,
-        { eventId, matchUserId, direction },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-        }
-      );
-
-      setPotentialMatches((prev) => ({
-        ...prev,
-        [eventId]: prev[eventId].filter((match) => match.userId !== matchUserId),
-      }));
-
-      if (response.data.matched) {
-        setSuccessMessage("It's a match! 🎉");
-      }
-    } catch (error) {
-      console.error('Error recording swipe:', error);
-      setJoinError('Failed to record swipe. Please try again.');
+      setError('Failed to fetch events');
+      console.error('Error:', error);
     } finally {
-      swipeCooldown.current = false;
+      setLoading(false);
     }
   };
 
-  const renderMatches = (eventId) => {
-    const matches = potentialMatches[eventId] || [];
-    const calculateAge = (birthDate) => {
-      const today = new Date();
-      const birth = new Date(birthDate);
-      let age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-      }
-      return age;
-    };
-
-    if (matches.length === 0) {
-      return (
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 2 }}>
-          No potential matches found for this event.
-        </Typography>
-      );
-    }
-
-    return (
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>
-          Potential Matches:
-        </Typography>
-        <Grid container spacing={2}>
-          {matches.map((match) => (
-            <Grid item xs={12} sm={6} md={4} key={match.id}>
-              <Card>
-                <CardMedia
-                  component="img"
-                  height="200"
-                  image={match.profilePicture || 'https://via.placeholder.com/https://ljernclsjawvxrelmufg.supabase.co/storage/v1/object/public/profile-pictures/profile-pictures/1732933263192_stage-backdrop-syncwave.webp150'}
-                  alt={match.matchId}
-                />
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                   Username: {match.username}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Age: {calculateAge(match.date_of_birth)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Rating: {match.rating}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Gender: {match.gender}
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'space-between' }}>
-                  <IconButton
-                    onClick={() => handleSwipe(eventId, match.matchId, 'left')}
-                    color="error"
-                    size="large"
-                  >
-                    <ThumbDownIcon />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => handleSwipe(eventId, match.matchId, 'right')}
-                    color="success"
-                    size="large"
-                  >
-                    <ThumbUpIcon />
-                  </IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
-    );
-  };
+  const sidebarItems = [
+    { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
+    { text: 'Chats', icon: <ChatIcon />, path: '/chats' },
+    { text: 'Friends', icon: <PeopleIcon />, path: '/friends' },
+    { text: 'Event', icon: <EventIcon />, path: '/events' },
+  ];
 
   return (
-    <Box
-      sx={{
-        maxWidth: 1200,
-        margin: 'auto',
-        mt: 5,
-        p: 3,
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        boxShadow: 3,
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        width: '100vw',
+        background: `url('/src/background.webp') no-repeat center center fixed`,
+        backgroundSize: 'cover',
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 1,
+        },
       }}
     >
-      <Typography variant="h4" component="h1" sx={{ mb: 3 }} align="center">
-        Dashboard
-      </Typography>
-
-      <Button
-        onClick={fetchEvents}
-        variant="outlined"
-        color="secondary"
-        fullWidth
-        sx={{ mt: 2 }}
+      {/* Menu Button */}
+      <IconButton
+        onClick={() => setDrawerOpen(true)}
+        sx={{ 
+          position: 'fixed', 
+          top: 20, 
+          left: 20, 
+          color: 'white',
+          zIndex: 1200,
+        }}
       >
-        Find Events
-      </Button>
+        <MenuIcon />
+      </IconButton>
 
-      {isLoading && <Skeleton variant="rectangular" width="100%" height={50} sx={{ mt: 2 }} />}
-      {fetchError && <Alert severity="error" sx={{ mt: 2 }}>{fetchError}</Alert>}
-      {joinError && <Alert severity="error" sx={{ mt: 2 }}>{joinError}</Alert>}
-      {matchError && <Alert severity="error" sx={{ mt: 2 }}>{matchError}</Alert>}
-      {successMessage && <Alert severity="success" sx={{ mt: 2 }}>{successMessage}</Alert>}
-
-      {events.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="h6">Events:</Typography>
-          {events.map((event) => (
-            <Box
-              key={event.id}
+      {/* Pop-up Sidebar */}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        sx={{
+          zIndex: 1300,
+          '& .MuiDrawer-paper': {
+            width: 240,
+            boxSizing: 'border-box',
+            bgcolor: 'rgba(17, 17, 17, 0.95)',
+            color: 'white',
+            borderRight: '1px solid #333',
+            zIndex: 1300,
+          },
+          '& .MuiBackdrop-root': {
+            zIndex: 1299,
+          },
+        }}
+      >
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <PersonIcon sx={{ color: '#8B5CF6' }} />
+          <Typography variant="h6" sx={{ color: 'white' }}>
+            Dashboard
+          </Typography>
+        </Box>
+        <List>
+          {sidebarItems.map((item) => (
+            <ListItem
+              button
+              key={item.text}
+              onClick={() => {
+                navigate(item.path);
+                setDrawerOpen(false);
+              }}
               sx={{
-                mt: 2,
-                p: 2,
-                border: '1px solid #ddd',
-                borderRadius: '8px',
+                '&:hover': {
+                  bgcolor: 'rgba(139, 92, 246, 0.1)',
+                },
               }}
             >
-              <Typography variant="subtitle1">{event.name}</Typography>
-              <Typography variant="body2">{event.date}</Typography>
-              <Button
-                onClick={() => joinMatchmake(event)}
-                variant="contained"
-                color="primary"
-                sx={{ mt: 1 }}
-              >
-                Join Matchmaking
-              </Button>
-              {renderMatches(event.id)}
-            </Box>
+              <ListItemIcon sx={{ color: '#8B5CF6' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItem>
           ))}
+        </List>
+      </Drawer>
+
+      {/* Main content */}
+      <Box 
+        sx={{ 
+          position: 'relative',
+          zIndex: 2,
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 4,
+          textAlign: 'center',
+        }}
+      >
+        <Typography 
+          variant="h1" 
+          sx={{ 
+            color: 'white',
+            fontWeight: 'bold',
+            mb: 2,
+            fontSize: { xs: '3rem', sm: '4rem', md: '5rem' },
+            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+            position: 'relative',
+            cursor: 'default',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              textShadow: '0 0 10px #8B5CF6, 0 0 20px #8B5CF6, 0 0 30px #8B5CF6',
+              background: 'linear-gradient(45deg, #8B5CF6, #EC4899)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            },
+          }}
+        >
+          MEET
+        </Typography>
+        <Typography 
+          variant="h1" 
+          sx={{ 
+            color: 'white',
+            fontWeight: 'bold',
+            mb: 2,
+            fontSize: { xs: '3rem', sm: '4rem', md: '5rem' },
+            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+            position: 'relative',
+            cursor: 'default',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px)',
+              textShadow: '0 0 10px #EC4899, 0 0 20px #EC4899, 0 0 30px #EC4899',
+              background: 'linear-gradient(45deg, #EC4899, #8B5CF6)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+            },
+          }}
+        >
+          YOUR
+        </Typography>
+        <Typography 
+          variant="h1" 
+          sx={{ 
+            color: 'white',
+            fontWeight: 'bold',
+            fontSize: { xs: '3rem', sm: '4rem', md: '5rem' },
+            textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
+            position: 'relative',
+            cursor: 'default',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-5px) scale(1.05)',
+              textShadow: '0 0 10px #8B5CF6, 0 0 20px #EC4899, 0 0 30px #8B5CF6',
+              background: 'linear-gradient(45deg, #8B5CF6, #EC4899, #8B5CF6)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              color: 'transparent',
+              letterSpacing: '0.1em',
+            },
+          }}
+        >
+          CONCERT CREW
+        </Typography>
+
+        {/* Optional: Add a subtle animation to draw attention to the hover effect */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: '20%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: '0.9rem',
+            animation: 'fadeInOut 2s infinite',
+            '@keyframes fadeInOut': {
+              '0%, 100%': { opacity: 0 },
+              '50%': { opacity: 1 },
+            },
+          }}
+        >
+          Hover over text
         </Box>
-      )}
+      </Box>
+
+      {/* Near Me Button */}
+      <Box sx={{ position: 'fixed', top: 20, right: 20, zIndex: 1200 }}>
+        <Button
+          variant="contained"
+          startIcon={<LocationOnIcon />}
+          sx={{
+            bgcolor: '#EC4899',
+            borderRadius: '50px',
+            px: 3,
+            '&:hover': {
+              bgcolor: '#D1366B',
+            },
+          }}
+        >
+          NEAR ME
+        </Button>
+      </Box>
     </Box>
   );
 };

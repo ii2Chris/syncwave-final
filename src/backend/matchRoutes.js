@@ -25,11 +25,9 @@ router.post('/matchmake', async (req, res) => {
         return res.status(401).json({ error: 'Invalid token. Please log in again.' });
       }
   
-      const userEmail = decodedToken.username;
-  
-      // Fetch user ID from Supabase
+      // Fetch user ID from Supabase using the decoded token
       const { data: user, error: userError } = await supabase
-        .from('users')
+        .from('user_profile')
         .select('id')
         .eq('session_token', token)
         .single();
@@ -90,143 +88,83 @@ router.post('/matchmake', async (req, res) => {
 
 
 router.get('/potential-matches/:eventId', async (req, res) => {
-    const { eventId } = req.params;
-  
-    try {
-      // Validate and decode the token
-      const token = req.headers.authorization?.split(' ')[1];
-      if (!token) {
-        return res.status(401).json({ error: 'Authorization token is missing' });
-      }
-  
-      let decodedToken;
-      try {
-        decodedToken = jwt.verify(token, secret);
-      } catch (err) {
-        return res.status(401).json({ error: 'Invalid token. Please log in again.' });
-      }
-  
-      // Retrieve user ID based on the session token
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id')
-        .eq('session_token', token)
-        .single();
-  
-      if (userError || !user) {
-        console.error('Error fetching user:', userError || 'User not found');
-        return res.status(404).json({ error: 'User not found' });
-      }
-  
-      const userId = user.id;
-  
-      // Check if the user is part of the matchmaking pool for the given event
-      const { data: userInPool, error: poolCheckError } = await supabase
-        .from('matchmake_pool')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('user_id', userId)
-        .single();
-  
-      if (poolCheckError) {
-        console.error('Error checking matchmaking pool1:', poolCheckError);
-        return res.status(500).json({ error: 'Failed to check matchmaking pool status1' });
-      }
-  
-      if (!userInPool) {
-        return res.status(403).json({
-          error: 'You must join the matchmaking pool for this event first',
-        });
-      }
-  
-      // Fetch existing swipes for the user in the event's pool
-      const { data: existingSwipes, error: swipesError } = await supabase
-        .from('swipe_actions')
-        .select('swiped_user_id')
-        .eq('swiper_id', userId)
-        .eq('pool_id', userInPool.id);
-  
-      if (swipesError) {
-        console.error('Error fetching existing swipes:', swipesError);
-        return res.status(500).json({ error: 'Failed to check existing swipes' });
-      }
-  
-      const swipedUserIds = existingSwipes?.map((swipe) => swipe.swiped_user_id) || [];
-  
-      // Retrieve potential matches from the matchmaking pool
-      // const { data: poolUsers, error: poolError } = await supabase
-      //   .from('matchmake_pool')
-      //   .select(`
-      //     id,
-      //     joined_at,
-      //     user_id,
-      //     users:users(id, username), 
-      //     user_profile:user_profile(favourite_artist, rating, profile_url, gender, age)
-      //   `)
-      //   .eq('event_id', eventId)
-      //   .neq('user_id', userId)  
-      //   .not('user_id', 'in', `(${swipedUserIds.join(',')}))`); 
+  const { eventId } = req.params;
 
-      // if (poolError) {
-      //   console.error('Error fetching pool users:', poolError);
-      //   return res.status(500).json({ error: 'Failed to retrieve potential matches' });
-      // }
-
-           const { data: poolUsers, error: poolError } = await supabase
-       .from('matchmake_pool')
-       .select(`
-         id,
-         joined_at,
-         user_id,
-         
-         user_profile!inner (
-          id,
-          username,
-           favourite_artist,
-           rating,
-           profile_url,
-           gender,
-           age
-         )
-       `)
-       .eq('event_id', eventId)
-       .neq('user_id', userId)
-       .not('user_id', 'in', `(${swipedUserIds.join(',')})`);
-     if (poolError) {
-       console.error('Error fetching pool users:', poolError);
-       return res.status(500).json({ error: 'Failed to retrieve potential matches' });
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'Authorization token is missing' });
     }
 
-      // Log the poolUsers to debug data
-      console.log('Fetched poolUsers:', poolUsers);
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(token, secret);
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
 
-      // Format the response
-      const formattedMatches = poolUsers.map((match) => {
-        // Log individual match data to debug
-        console.log('Match Data:', match);
+    console.log('Processing request for eventId:', eventId);
+    console.log('Decoded token userId:', decodedToken.userId);
 
-        return {
-          matchId: match.id,
-          userId: match.users.id,
-          username: match.users.username,
-          profilePicture: match.user_profile.profile_url,
-          favouriteArtists: match.user_profile.favourite_artist,
-          rating: match.user_profile.rating,
-          gender: match.user_profile.gender,
-          age: match.user_profile.age,
-          joinedAt: match.joined_at,
-        };
+    try {
+      // Add logging to verify the parameters being sent
+      console.log('Calling get_user_matches with:', {
+        input_swiper_id: decodedToken.userId,
+        input_event_id: eventId
       });
+
+      const { data: matches, error: matchError } = await supabase.rpc('get_user_matches', {
+        input_swiper_id: decodedToken.userId,
+        input_event_id: eventId
+      });
+
+      if (matchError) {
+        console.error('Error fetching matches:', matchError);
+        return res.status(500).json({ error: 'Failed to retrieve matches', details: matchError });
+      }
+
+      // Add logging to check if there are users in the matchmake_pool
+      const { data: poolCount, error: poolError } = await supabase
+        .from('matchmake_pool')
+        .select('count', { count: 'exact' })
+        .eq('event_id', eventId);
+      
+      console.log('Users in matchmake_pool for event:', poolCount);
+
+      console.log('Raw matches data:', JSON.stringify(matches, null, 2));
+
+      const formattedMatches = matches.map(match => ({
+        userId: match.user_id,
+        username: match.username,
+        profilePicture: match.profile_picture_url,
+        favouriteArtist: match.favourite_artist,
+        rating: match.rating,
+        gender: match.gender,
+        age: match.date_of_birth,
+        aboutMe: match.about_me,
+        joinedAt: match.joined_at
+      }));
+
+      console.log('Formatted matches:', JSON.stringify(formattedMatches, null, 2));
 
       res.status(200).json({
         eventId,
-        matches: formattedMatches,
+        matches: formattedMatches
       });
+
     } catch (error) {
-      console.error('Error fetching potential matches:', error);
-      res.status(500).json({ error: 'Failed to retrieve potential matches' });
+      console.error('Error in potential matches:', error);
+      res.status(500).json({ error: 'Failed to retrieve matches' });
     }
-}); // Added missing closing bracket here
+  } catch (error) {
+    console.error('Error in token verification:', error);
+    res.status(500).json({ error: 'Failed to process request' });
+  }
+});
+
+
+
+
 
 
 router.post('/swipe', async (req, res) => {
@@ -247,9 +185,9 @@ router.post('/swipe', async (req, res) => {
         return res.status(401).json({ error: 'Invalid token. Please log in again.' });
       }
   
-      // Get user info
+      // Get user info from user_profile
       const { data: user, error: userError } = await supabase
-        .from('users')
+        .from('user_profile')
         .select('id')
         .eq('session_token', token)
         .single();
