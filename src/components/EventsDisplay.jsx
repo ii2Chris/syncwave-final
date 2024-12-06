@@ -1,10 +1,13 @@
 import React from 'react';
-import { Box, Typography, Avatar, Grid, Chip } from '@mui/material';
+import { Box, Typography, Avatar, Grid, Chip, Button } from '@mui/material';
 import { motion } from 'framer-motion';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { useNavigate } from 'react-router-dom';
 
 const EventsDisplay = ({ events }) => {
+  const navigate = useNavigate();
+
   if (!events || !events._embedded || !events._embedded.events) {
     return null;
   }
@@ -25,12 +28,10 @@ const EventsDisplay = ({ events }) => {
 
       <Grid container spacing={4} justifyContent="center">
         {events._embedded.events.map((event, index) => {
-          // Get the highest resolution image
           const displayImage = event.images.reduce((prev, current) => {
             return (prev.width > current.width) ? prev : current;
           }).url;
 
-          // Format date
           const eventDate = new Date(event.dates.start.dateTime);
           const formattedDate = eventDate.toLocaleDateString('en-US', {
             month: 'short',
@@ -39,7 +40,7 @@ const EventsDisplay = ({ events }) => {
           });
 
           return (
-            <Grid item xs={12} sm={4} md={2.4} key={event.id}>
+            <Grid item xs={12} sm={6} md={4} key={event.id}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -64,8 +65,8 @@ const EventsDisplay = ({ events }) => {
                   <Avatar
                     src={displayImage}
                     sx={{
-                      width: 120,
-                      height: 120,
+                      width: 140,
+                      height: 140,
                       mb: 2,
                       border: '3px solid #8B5CF6',
                       transition: 'transform 0.3s ease',
@@ -79,13 +80,14 @@ const EventsDisplay = ({ events }) => {
                     sx={{
                       color: 'white',
                       fontWeight: 'bold',
-                      mb: 1
+                      mb: 1,
+                      fontSize: '1.1rem'
                     }}
                   >
                     {event.name}
                   </Typography>
                   
-                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
                     <Chip
                       icon={<CalendarTodayIcon sx={{ color: '#8B5CF6 !important' }} />}
                       label={formattedDate}
@@ -93,7 +95,7 @@ const EventsDisplay = ({ events }) => {
                         backgroundColor: 'rgba(139, 92, 246, 0.1)',
                         color: 'white',
                         '& .MuiChip-label': {
-                          fontSize: '0.75rem'
+                          fontSize: '0.85rem'
                         }
                       }}
                     />
@@ -104,10 +106,25 @@ const EventsDisplay = ({ events }) => {
                         backgroundColor: 'rgba(236, 72, 153, 0.1)',
                         color: 'white',
                         '& .MuiChip-label': {
-                          fontSize: '0.75rem'
+                          fontSize: '0.85rem'
                         }
                       }}
                     />
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={() => navigate(`/matchmaking/${event.id}`)}
+                      sx={{
+                        mt: 2,
+                        backgroundColor: '#8B5CF6',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: '#7C3AED'
+                        }
+                      }}
+                    >
+                      Matchmake
+                    </Button>
                   </Box>
                 </Box>
               </motion.div>
@@ -119,4 +136,4 @@ const EventsDisplay = ({ events }) => {
   );
 };
 
-export default EventsDisplay; 
+export default EventsDisplay;

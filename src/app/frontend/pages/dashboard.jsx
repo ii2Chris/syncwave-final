@@ -32,7 +32,6 @@ import FormControl from '@mui/material/FormControl';
 const Dashboard = () => {
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [events, setEvents] = useState(null);
   const [showEvents, setShowEvents] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,26 +46,6 @@ const Dashboard = () => {
     }
   }, [navigate]);
 
-  // Fetch events
-  useEffect(() => {
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
-    try {
-      const response = await axios.get('http://localhost:5000/event', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-      });
-      setEvents(response.data.events || []);
-      setError(null);
-    } catch (error) {
-      setError('Failed to fetch events');
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const sidebarItems = [
     { text: 'Profile', icon: <PersonIcon />, path: '/profile' },
     { text: 'Chats', icon: <ChatIcon />, path: '/chats' },
@@ -80,7 +59,7 @@ const Dashboard = () => {
       setError(null);
       const response = await axios.get('http://localhost:5000/events/nearby', {
         headers: { 
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
@@ -117,7 +96,7 @@ const Dashboard = () => {
       setError(null);
       const response = await axios.get(`http://localhost:5000/event/search?query=${searchQuery}&countryCode=${countryCode}`, {
         headers: { 
-          Authorization: `Bearer ${localStorage.getItem('token')}`
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
