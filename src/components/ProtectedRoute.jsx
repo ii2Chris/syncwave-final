@@ -10,6 +10,7 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const verifyToken = async () => {
       const token = localStorage.getItem('token');
+      console.log('Token found:', !!token);
       
       if (!token) {
         setIsAuthenticated(false);
@@ -18,11 +19,12 @@ const ProtectedRoute = ({ children }) => {
 
       try {
         // Verify token with backend
-        await axios.get('http://localhost:5000/verify', {
+        const response = await axios.get('http://localhost:5000/verify', {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
+        console.log('Verification response:', response.data);
         setIsAuthenticated(true);
       } catch (error) {
         console.error('Token verification failed:', error);

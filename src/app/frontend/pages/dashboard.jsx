@@ -41,8 +41,8 @@ const Dashboard = () => {
 
   // Authentication check
   useEffect(() => {
-    const authToken = localStorage.getItem('authToken');
-    if (!authToken) {
+    const token = localStorage.getItem('token');
+    if (!token) {
       navigate('/login');
     }
   }, [navigate]);
@@ -78,7 +78,7 @@ const Dashboard = () => {
           radius: 50 // default radius in miles
         },
         headers: { 
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
       
@@ -120,7 +120,7 @@ const Dashboard = () => {
       setError(null);
       const response = await axios.get(`http://localhost:5000/event/search?query=${searchQuery}&countryCode=${countryCode}`, {
         headers: { 
-          Authorization: `Bearer ${localStorage.getItem('authToken')}`
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
       });
       

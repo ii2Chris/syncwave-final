@@ -1,12 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Avatar, Grid, Chip, Button } from '@mui/material';
 import { motion } from 'framer-motion';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const EventsDisplay = ({ events }) => {
   const navigate = useNavigate();
+  const [matchmakingStatus, setMatchmakingStatus] = useState({});
+
+  const handleMatchmaking = async (eventId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        return;
+      }
+
+      const response = await axios.post(
+        'http://localhost:5000/matchmake', 
+        { eventId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (response.status === 201) {
+        console.log('Successfully joined matchmaking pool');
+        setMatchmakingStatus(prev => ({
+          ...prev,
+          [eventId]: true
+        }));
+      }
+
+    } catch (error) {
+      if (error.response?.status === 400) {
+        console.log('Already in matchmaking pool');
+        setMatchmakingStatus(prev => ({
+          ...prev,
+          [eventId]: true
+        }));
+      } else {
+        console.error('Error joining matchmaking:', error.response?.data?.error || error.message);
+      }
+    }
+  };
+
+  const handleStartSwiping = (eventId) => {
+    navigate(`/matchmaking/${eventId}`);
+  };
 
   if (!events || !events._embedded || !events._embedded.events) {
     return null;
@@ -113,7 +158,10 @@ const EventsDisplay = ({ events }) => {
                     <Button
                       variant="contained"
                       fullWidth
-                      onClick={() => navigate(`/matchmaking/${event.id}`)}
+                      onClick={() => matchmakingStatus[event.id] 
+                        ? handleStartSwiping(event.id) 
+                        : handleMatchmaking(event.id)
+                      }
                       sx={{
                         mt: 2,
                         backgroundColor: '#8B5CF6',
@@ -123,7 +171,7 @@ const EventsDisplay = ({ events }) => {
                         }
                       }}
                     >
-                      Matchmake
+                      {matchmakingStatus[event.id] ? 'Start Swiping' : 'Matchmake'}
                     </Button>
                   </Box>
                 </Box>
