@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Box, Typography, Avatar, Grid, Chip, Button, Snackbar, Alert } from '@mui/material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -186,24 +188,80 @@ const EventsDisplay = ({ events }) => {
                         }
                       }}
                     />
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      onClick={() => matchmakingStatus[event.id] 
-                        ? handleStartSwiping(event.id) 
-                        : handleMatchmaking(event.id)
-                      }
-                      sx={{
-                        mt: 2,
-                        backgroundColor: '#8B5CF6',
-                        color: 'white',
-                        '&:hover': {
-                          backgroundColor: '#7C3AED'
-                        }
-                      }}
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      {matchmakingStatus[event.id] ? 'Start Swiping' : 'Matchmake'}
-                    </Button>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => matchmakingStatus[event.id] 
+                          ? handleStartSwiping(event.id) 
+                          : handleMatchmaking(event.id)
+                        }
+                        startIcon={
+                          <AnimatePresence mode="wait">
+                            <motion.div
+                              key={matchmakingStatus[event.id] ? 'swiping' : 'matchmaking'}
+                              initial={{ scale: 0, rotate: -180 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              exit={{ scale: 0, rotate: 180 }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              {matchmakingStatus[event.id] ? <FavoriteIcon /> : <PeopleAltIcon />}
+                            </motion.div>
+                          </AnimatePresence>
+                        }
+                        sx={{
+                          mt: 2,
+                          height: '48px',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          background: matchmakingStatus[event.id]
+                            ? 'linear-gradient(45deg, #FF3366 30%, #FF6B6B 90%)'
+                            : 'linear-gradient(45deg, #8B5CF6 30%, #6366F1 90%)',
+                          boxShadow: matchmakingStatus[event.id]
+                            ? '0 3px 5px 2px rgba(255, 51, 102, .3)'
+                            : '0 3px 5px 2px rgba(139, 92, 246, .3)',
+                          transition: 'all 0.3s ease-in-out',
+                          '&:hover': {
+                            background: matchmakingStatus[event.id]
+                              ? 'linear-gradient(45deg, #FF6B6B 30%, #FF3366 90%)'
+                              : 'linear-gradient(45deg, #6366F1 30%, #8B5CF6 90%)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: matchmakingStatus[event.id]
+                              ? '0 4px 10px 2px rgba(255, 51, 102, .4)'
+                              : '0 4px 10px 2px rgba(139, 92, 246, .4)',
+                          },
+                          '&:active': {
+                            transform: 'translateY(1px)',
+                          },
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: '-100%',
+                            width: '100%',
+                            height: '100%',
+                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                            transition: 'all 0.5s ease-in-out',
+                          },
+                          '&:hover::before': {
+                            left: '100%',
+                          }
+                        }}
+                      >
+                        <motion.span
+                          key={matchmakingStatus[event.id] ? 'swiping' : 'matchmaking'}
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -20, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {matchmakingStatus[event.id] ? 'Start Swiping' : 'Matchmake'}
+                        </motion.span>
+                      </Button>
+                    </motion.div>
                   </Box>
                 </Box>
               </motion.div>
