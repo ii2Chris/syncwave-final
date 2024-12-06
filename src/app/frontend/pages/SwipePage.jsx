@@ -31,6 +31,8 @@ const SwipePage = () => {
   const fetchPotentialMatches = async () => {
     try {
       setLoading(true);
+      console.log('Fetching matches for event:', eventId);
+
       const response = await axios.get(
         `http://localhost:5000/matchmaking/potential-matches/${eventId}`,
         {
@@ -40,22 +42,24 @@ const SwipePage = () => {
         }
       );
 
+      console.log('Matches response:', response.data);
+
       if (response.data.matches && response.data.matches.length > 0) {
         setPotentialMatches(response.data.matches);
-        setCurrentIndex(0); // Reset to first match
+        setCurrentIndex(0);
         setError(null);
       } else {
-        // If no matches found, navigate back to search results
         navigate('/search-results', { 
           state: { 
             error: {
-              message: 'No new potential matches found. Try again later!',
+              message: 'No potential matches found for this event. Try again later!',
               severity: 'info'
             }
           }
         });
       }
     } catch (error) {
+      console.error('Error fetching matches:', error.response?.data || error);
       setError(error.response?.data?.error || 'Failed to fetch potential matches');
     } finally {
       setLoading(false);

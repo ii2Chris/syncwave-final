@@ -50,7 +50,7 @@ const EventsDisplay = ({ events }) => {
   };
 
   const handleStartSwiping = (eventId) => {
-    navigate(`/matchmaking/${eventId}`);
+    navigate(`/swipe/${eventId}`);
   };
 
   if (!events || !events._embedded || !events._embedded.events) {
