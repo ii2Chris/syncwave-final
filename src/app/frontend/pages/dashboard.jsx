@@ -37,6 +37,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [countryCode, setCountryCode] = useState('US');
+  const [events, setEvents] = useState(null);
 
   // Authentication check
   useEffect(() => {
@@ -57,20 +58,43 @@ const Dashboard = () => {
     try {
       setLoading(true);
       setError(null);
+
+      // First, get user's location
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        });
+      });
+
+      const { latitude, longitude } = position.coords;
+      
+      // Then fetch events with the location
       const response = await axios.get('http://localhost:5000/events/nearby', {
+        params: {
+          latitude,
+          longitude,
+          radius: 50 // default radius in miles
+        },
         headers: { 
           Authorization: `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
       if (response.data) {
-        setEvents(response.data);
-        setShowEvents(true);
+        // Instead of setting local state, navigate to search results
+        navigate('/search-results', { 
+          state: { events: response.data }
+        });
       }
     } catch (error) {
       console.error('Error fetching events:', error);
-      setError('Failed to fetch events. Please try again.');
-      setShowEvents(false);
+      if (error.name === 'GeolocationPositionError') {
+        setError('Unable to get your location. Please enable location services and try again.');
+      } else {
+        setError('Failed to fetch events. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
