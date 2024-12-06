@@ -38,6 +38,7 @@ import ListItemText from '@mui/material/ListItemText';
 import HomeIcon from '@mui/icons-material/Home';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import Divider from '@mui/material/Divider';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const schema = yup.object({
   aboutMe: yup.string()
@@ -65,14 +66,6 @@ const ProfilePage = () => {
     resolver: yupResolver(schema)
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // Calculate profile completion percentage
-  const calculateCompletion = (user) => {
-    if (!user) return 0;
-    const fields = ['about_me', 'interests', 'favourite_artist', 'gender', 'profile_picture_url'];
-    const completedFields = fields.filter(field => user[field] && user[field].length > 0);
-    return Math.round((completedFields.length / fields.length) * 100);
-  };
 
   const handleEditClick = (field) => {
     setEditField(field);
@@ -326,86 +319,27 @@ const ProfilePage = () => {
   return (
     <Box sx={{
       minHeight: '100vh',
-      background: '#f5f5f5',
+      background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
       py: 6
     }}>
-      {/* Menu Button */}
       <IconButton
-        onClick={() => setDrawerOpen(true)}
+        onClick={() => navigate('/dashboard')}
         sx={{
           position: 'fixed',
-          left: 20,
           top: 20,
-          backgroundColor: 'white',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          left: 20,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          color: 'white',
           '&:hover': {
-            backgroundColor: '#f8f8f8'
-          }
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            transform: 'scale(1.1)',
+          },
+          transition: 'all 0.3s ease',
+          zIndex: 1200,
         }}
       >
-        <MenuIcon />
+        <ArrowBackIcon />
       </IconButton>
-
-      {/* Side Drawer */}
-      <Drawer
-        anchor="left"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      >
-        <Box
-          sx={{
-            width: 250,
-            pt: 2,
-            backgroundColor: '#f8f8f8',
-            height: '100%'
-          }}
-          role="presentation"
-        >
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            px: 2, 
-            pb: 2
-          }}>
-            <IconButton onClick={() => setDrawerOpen(false)}>
-              <ChevronLeftIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ ml: 1 }}>
-              Menu
-            </Typography>
-          </Box>
-          
-          <Divider />
-          
-          <List>
-            <ListItem component="button" 
-              onClick={() => {
-                navigate('/dashboard');
-                setDrawerOpen(false);
-              }}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'rgba(254, 61, 113, 0.1)'
-                }
-              }}
-            >
-              <ListItemIcon>
-                <HomeIcon sx={{ color: '#fe3d71' }} />
-              </ListItemIcon>
-              <ListItemText 
-                primary="Return to Dashboard" 
-                sx={{
-                  '& .MuiListItemText-primary': {
-                    color: '#1a1a1a',
-                    fontWeight: 500
-                  }
-                }}
-              />
-            </ListItem>
-            {/* Add more navigation items here if needed */}
-          </List>
-        </Box>
-      </Drawer>
 
       <Container maxWidth="sm">
         <Paper
@@ -415,115 +349,106 @@ const ProfilePage = () => {
             borderRadius: '25px',
             textAlign: 'center',
             position: 'relative',
-            background: 'white'
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '200px',
+              background: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+              zIndex: 0
+            }
           }}
         >
           {/* Profile Section */}
-          <Box sx={{ position: 'relative', mb: 6 }}>
+          <Box sx={{ 
+            position: 'relative', 
+            mb: 6,
+            zIndex: 1 
+          }}>
             <Avatar
               src={previewUrl}
               sx={{
                 width: 180,
                 height: 180,
                 margin: '0 auto',
-                border: '4px solid #fe3d71',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                border: '4px solid white',
+                boxShadow: '0 8px 24px rgba(139, 92, 246, 0.3)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05) rotate(5deg)',
+                  cursor: 'pointer',
+                  boxShadow: '0 12px 28px rgba(236, 72, 153, 0.4)'
+                }
               }}
+              onClick={() => document.getElementById('profile-picture').click()}
             />
             <Typography 
               variant="h4" 
               sx={{ 
                 mt: 3,
-                fontWeight: '500',
-                color: '#1a1a1a'
+                fontWeight: '600',
+                color: '#1a1a1a',
+                textShadow: '0 2px 4px rgba(0,0,0,0.1)'
               }}
             >
               {userData?.username || 'Loading...'}
             </Typography>
           </Box>
 
-          {/* Action Buttons */}
+          {/* Action Buttons with enhanced styling */}
           <Grid 
             container 
             spacing={4} 
             justifyContent="center" 
             sx={{ mb: 4 }}
           >
-            <Grid item>
-              <IconButton 
-                sx={{ 
-                  backgroundColor: '#f8f8f8',
-                  width: 80,
-                  height: 80,
-                  '&:hover': {
-                    backgroundColor: '#f0f0f0'
-                  }
-                }}
-                onClick={() => navigate('/settings')}
-              >
-                <SettingsIcon sx={{ fontSize: 32 }} />
-              </IconButton>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  mt: 1,
-                  fontWeight: '500',
-                  color: '#666'
-                }}
-              >
-                SETTINGS
-              </Typography>
-            </Grid>
-            <Grid item>
-              <IconButton 
-                sx={{ 
-                  backgroundColor: '#ffffff',
-                  width: 80,
-                  height: 80,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  '&:hover': {
-                    backgroundColor: '#f8f8f8'
-                  }
-                }}
-                onClick={() => setOpenModal(true)}
-              >
-                <EditIcon sx={{ fontSize: 32 }} />
-              </IconButton>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  mt: 1,
-                  fontWeight: '500',
-                  color: '#666'
-                }}
-              >
-                EDIT PROFILE
-              </Typography>
-            </Grid>
-            <Grid item>
-              <IconButton 
-                sx={{ 
-                  backgroundColor: '#f8f8f8',
-                  width: 80,
-                  height: 80,
-                  '&:hover': {
-                    backgroundColor: '#f0f0f0'
-                  }
-                }}
-              >
-                <SecurityIcon sx={{ fontSize: 32 }} />
-              </IconButton>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  mt: 1,
-                  fontWeight: '500',
-                  color: '#666'
-                }}
-              >
-                SAFETY
-              </Typography>
-            </Grid>
+            {[
+              { icon: <SettingsIcon />, label: 'SETTINGS', onClick: () => navigate('/settings') },
+              { icon: <EditIcon />, label: 'EDIT PROFILE', onClick: () => setOpenModal(true) },
+              { icon: <SecurityIcon />, label: 'SAFETY', onClick: () => {} }
+            ].map((action, index) => (
+              <Grid item key={index}>
+                <IconButton 
+                  sx={{ 
+                    backgroundColor: action.label === 'EDIT PROFILE' ? '#8B5CF6' : 'rgba(255, 255, 255, 0.8)',
+                    width: 80,
+                    height: 80,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px) scale(1.05)',
+                      backgroundColor: action.label === 'EDIT PROFILE' ? '#7C3AED' : 'rgba(255, 255, 255, 0.9)',
+                      boxShadow: '0 8px 20px rgba(139, 92, 246, 0.3)'
+                    }
+                  }}
+                  onClick={action.onClick}
+                >
+                  {React.cloneElement(action.icon, { 
+                    sx: { 
+                      fontSize: 32,
+                      color: action.label === 'EDIT PROFILE' ? 'white' : '#8B5CF6'
+                    } 
+                  })}
+                </IconButton>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    mt: 1,
+                    fontWeight: '500',
+                    color: 'white',
+                    fontSize: '0.875rem',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  {action.label}
+                </Typography>
+              </Grid>
+            ))}
           </Grid>
         </Paper>
       </Container>
