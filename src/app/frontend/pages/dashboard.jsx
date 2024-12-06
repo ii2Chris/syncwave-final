@@ -28,6 +28,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -138,6 +139,11 @@ const Dashboard = () => {
     }
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
+
   return (
     <Box 
       sx={{ 
@@ -198,7 +204,7 @@ const Dashboard = () => {
             Dashboard
           </Typography>
         </Box>
-        <List>
+        <List sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           {sidebarItems.map((item) => (
             <ListItem
               component="button"
@@ -219,6 +225,22 @@ const Dashboard = () => {
               <ListItemText primary={item.text} />
             </ListItem>
           ))}
+          
+          <ListItem
+            component="button"
+            onClick={handleSignOut}
+            sx={{
+              marginTop: 'auto',
+              '&:hover': {
+                bgcolor: 'rgba(139, 92, 246, 0.1)',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: '#8B5CF6' }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            <ListItemText primary="Sign Out" />
+          </ListItem>
         </List>
       </Drawer>
 
@@ -305,25 +327,6 @@ const Dashboard = () => {
         >
           CONCERT CREW
         </Typography>
-
-        {/* Optional: Add a subtle animation to draw attention to the hover effect */}
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: '20%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.6)',
-            fontSize: '0.9rem',
-            animation: 'fadeInOut 2s infinite',
-            '@keyframes fadeInOut': {
-              '0%, 100%': { opacity: 0 },
-              '50%': { opacity: 1 },
-            },
-          }}
-        >
-          Hover over text
-        </Box>
       </Box>
 
       {/* Near Me Button and Search Bar Container */}
