@@ -5,6 +5,7 @@ import { TextField, Button, Box, Typography, Alert, Container, Grid, Snackbar } 
 import { useNavigate } from 'react-router-dom';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { inputStyles } from './signup';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -117,14 +118,7 @@ const Login = () => {
                     })}
                     error={!!errors.email}
                     helperText={errors.email?.message}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        pl: 5,
-                        '&:hover fieldset': {
-                          borderColor: '#8B5CF6',
-                        },
-                      },
-                    }}
+                    sx={inputStyles}
                   />
                 </Box>
 
@@ -148,14 +142,7 @@ const Login = () => {
                     })}
                     error={!!errors.password}
                     helperText={errors.password?.message}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        pl: 5,
-                        '&:hover fieldset': {
-                          borderColor: '#8B5CF6',
-                        },
-                      },
-                    }}
+                    sx={inputStyles}
                   />
                 </Box>
 

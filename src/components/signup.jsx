@@ -184,6 +184,7 @@ const Signup = () => {
                   InputLabelProps={{
                     shrink: true,
                   }}
+                  sx={altInputStyles}
                 />
 
                 <TextField
@@ -193,6 +194,7 @@ const Signup = () => {
                   error={!!errors.phoneNumber}
                   helperText={errors.phoneNumber?.message}
                   placeholder="+1234567890"
+                  sx={altInputStyles}
                 />
 
                 <Box sx={{ position: 'relative' }}>
@@ -283,16 +285,39 @@ const Signup = () => {
   );
 };
 
-const inputStyles = {
+export const inputStyles = {
   '& .MuiOutlinedInput-root': {
-    pl: 5,
+    pl: 4,
     '&:hover fieldset': {
       borderColor: '#8B5CF6',
     },
     '&.Mui-focused fieldset': {
       borderColor: '#8B5CF6',
     },
-  }
+  },
+  '& .MuiInputLabel-root': {
+    left: 30,
+    '&.Mui-focused': {
+      color: '#8B5CF6',
+      transform: 'scale(0.75) translateY(-0.75em) translateX(-18px)',
+    },
+  },
+};
+
+const altInputStyles = {
+  '& .MuiOutlinedInput-root': {
+    '&:hover fieldset': {
+      borderColor: '#8B5CF6',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#8B5CF6',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    '&.Mui-focused': {
+      color: '#8B5CF6',
+    },
+  },
 };
 
 export default Signup;
