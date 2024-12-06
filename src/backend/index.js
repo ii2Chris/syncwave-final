@@ -7,6 +7,7 @@ import authRoutes from './authRoutes.js';
 import eventRoutes from './eventRoutes.js';
 import matchRoutes from './matchRoutes.js';
 import uploadRoutes from './uploadRoutes.js';
+import chatRoutes from './chatRoutes.js';
 
 dotenv.config();
 
@@ -21,7 +22,8 @@ app.use(bodyParser.json());
 app.use('/', authRoutes);
 app.use('/', eventRoutes);
 app.use('/', matchRoutes);
-app.use('/',uploadRoutes);
+app.use('/', uploadRoutes);
+app.use('/', chatRoutes);
 
 // Start server
 app.listen(PORT, () => {

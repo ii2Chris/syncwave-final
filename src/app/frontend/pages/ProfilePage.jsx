@@ -29,6 +29,15 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import SecurityIcon from '@mui/icons-material/Security';
 import CloseIcon from '@mui/icons-material/Close';
 import { useNavigate } from 'react-router-dom';
+import MenuIcon from '@mui/icons-material/Menu';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import HomeIcon from '@mui/icons-material/Home';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import Divider from '@mui/material/Divider';
 
 const schema = yup.object({
   aboutMe: yup.string()
@@ -55,6 +64,7 @@ const ProfilePage = () => {
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
     resolver: yupResolver(schema)
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Calculate profile completion percentage
   const calculateCompletion = (user) => {
@@ -319,6 +329,84 @@ const ProfilePage = () => {
       background: '#f5f5f5',
       py: 6
     }}>
+      {/* Menu Button */}
+      <IconButton
+        onClick={() => setDrawerOpen(true)}
+        sx={{
+          position: 'fixed',
+          left: 20,
+          top: 20,
+          backgroundColor: 'white',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          '&:hover': {
+            backgroundColor: '#f8f8f8'
+          }
+        }}
+      >
+        <MenuIcon />
+      </IconButton>
+
+      {/* Side Drawer */}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <Box
+          sx={{
+            width: 250,
+            pt: 2,
+            backgroundColor: '#f8f8f8',
+            height: '100%'
+          }}
+          role="presentation"
+        >
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            px: 2, 
+            pb: 2
+          }}>
+            <IconButton onClick={() => setDrawerOpen(false)}>
+              <ChevronLeftIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ ml: 1 }}>
+              Menu
+            </Typography>
+          </Box>
+          
+          <Divider />
+          
+          <List>
+            <ListItem component="button" 
+              onClick={() => {
+                navigate('/dashboard');
+                setDrawerOpen(false);
+              }}
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(254, 61, 113, 0.1)'
+                }
+              }}
+            >
+              <ListItemIcon>
+                <HomeIcon sx={{ color: '#fe3d71' }} />
+              </ListItemIcon>
+              <ListItemText 
+                primary="Return to Dashboard" 
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    color: '#1a1a1a',
+                    fontWeight: 500
+                  }
+                }}
+              />
+            </ListItem>
+            {/* Add more navigation items here if needed */}
+          </List>
+        </Box>
+      </Drawer>
+
       <Container maxWidth="sm">
         <Paper
           elevation={3}

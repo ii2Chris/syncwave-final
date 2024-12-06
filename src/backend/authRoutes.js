@@ -279,4 +279,39 @@ router.patch('/profile', async (req, res) => {
   }
 });
 
+router.get('/verify', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    // Verify the token
+    const decodedToken = jwt.verify(token, secret);
+
+    // Check if user exists and token matches
+    const { data: user, error } = await supabase
+      .from('user_profile')
+      .select('id, username')
+      .eq('session_token', token)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    res.status(200).json({ 
+      verified: true, 
+      user: {
+        id: user.id,
+        username: user.username
+      }
+    });
+    
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
 export default router;

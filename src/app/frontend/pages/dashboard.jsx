@@ -11,6 +11,8 @@ import {
   ListItemText,
   Button,
   IconButton,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import PersonIcon from '@mui/icons-material/Person';
@@ -18,13 +20,24 @@ import ChatIcon from '@mui/icons-material/Chat';
 import PeopleIcon from '@mui/icons-material/People';
 import EventIcon from '@mui/icons-material/Event';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import EventsDisplay from '../../../components/EventsDisplay';
+import SearchIcon from '@mui/icons-material/Search';
+import InputAdornment from '@mui/material/InputAdornment';
+import TextField from '@mui/material/TextField';
+import CloseIcon from '@mui/icons-material/Close';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [events, setEvents] = useState(null);
+  const [showEvents, setShowEvents] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [countryCode, setCountryCode] = useState('US');
 
   // Authentication check
   useEffect(() => {
@@ -60,6 +73,67 @@ const Dashboard = () => {
     { text: 'Friends', icon: <PeopleIcon />, path: '/friends' },
     { text: 'Event', icon: <EventIcon />, path: '/events' },
   ];
+
+  const handleNearMeClick = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get('http://localhost:5000/events/nearby', {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data) {
+        setEvents(response.data);
+        setShowEvents(true);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setError('Failed to fetch events. Please try again.');
+      setShowEvents(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const countries = [
+    { code: 'US', name: 'United States' },
+    { code: 'CA', name: 'Canada' },
+    { code: 'GB', name: 'United Kingdom' },
+    { code: 'AU', name: 'Australia' },
+    { code: 'DE', name: 'Germany' },
+    { code: 'FR', name: 'France' },
+    { code: 'ES', name: 'Spain' },
+    { code: 'IT', name: 'Italy' },
+    { code: 'JP', name: 'Japan' },
+    { code: 'MX', name: 'Mexico' }
+  ];
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`http://localhost:5000/event/search?query=${searchQuery}&countryCode=${countryCode}`, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.data && response.data._embedded && response.data._embedded.events && response.data._embedded.events.length > 0) {
+        navigate('/search-results', { state: { events: response.data } });
+      } else {
+        setError(`No events found for "${searchQuery}" in ${countries.find(c => c.code === countryCode).name}`);
+        setSearchQuery('');
+      }
+    } catch (error) {
+      console.error('Error searching events:', error);
+      setError('Failed to search events. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box 
@@ -124,7 +198,7 @@ const Dashboard = () => {
         <List>
           {sidebarItems.map((item) => (
             <ListItem
-              button
+              component="button"
               key={item.text}
               onClick={() => {
                 navigate(item.path);
@@ -249,11 +323,25 @@ const Dashboard = () => {
         </Box>
       </Box>
 
-      {/* Near Me Button */}
-      <Box sx={{ position: 'fixed', top: 20, right: 20, zIndex: 1200 }}>
+      {/* Near Me Button and Search Bar Container */}
+      <Box 
+        sx={{ 
+          position: 'fixed', 
+          top: 20, 
+          right: 20, 
+          zIndex: 1200,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          alignItems: 'flex-end'
+        }}
+      >
+        {/* Existing Near Me Button */}
         <Button
           variant="contained"
           startIcon={<LocationOnIcon />}
+          onClick={handleNearMeClick}
+          disabled={loading}
           sx={{
             bgcolor: '#EC4899',
             borderRadius: '50px',
@@ -263,9 +351,119 @@ const Dashboard = () => {
             },
           }}
         >
-          NEAR ME
+          {loading ? 'Loading...' : 'NEAR ME'}
         </Button>
+
+        {/* Search Bar with Country Selector */}
+        <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+          <FormControl size="small">
+            <Select
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              sx={{
+                minWidth: 120,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'white',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#EC4899',
+                },
+                '& .MuiSvgIcon-root': {
+                  color: 'white',
+                },
+              }}
+            >
+              {countries.map((country) => (
+                <MenuItem key={country.code} value={country.code}>
+                  {country.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <form onSubmit={handleSearch} style={{ flex: 1 }}>
+            <TextField
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search events..."
+              variant="outlined"
+              size="small"
+              fullWidth
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'white' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setSearchQuery('')}
+                      sx={{ color: 'white' }}
+                    >
+                      <CloseIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+                sx: {
+                  color: 'white',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '25px',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.5) !important',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#EC4899 !important',
+                  },
+                  '&::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                  },
+                }
+              }}
+              sx={{
+                width: '300px',
+                '& .MuiOutlinedInput-root': {
+                  '& input::placeholder': {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                  },
+                },
+              }}
+            />
+          </form>
+        </Box>
       </Box>
+
+      {/* Events Display */}
+      {showEvents && events && (
+        <Box sx={{ position: 'relative', zIndex: 2, px: 4 }}>
+          <EventsDisplay events={events} />
+        </Box>
+      )}
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={() => setError(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setError(null)} 
+          severity="error"
+          sx={{ width: '100%' }}
+        >
+          {error}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
