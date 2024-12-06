@@ -6,22 +6,40 @@ import supabaseClient from './supabaseClient.js';
 const { supabase, secret } = supabaseClient;
 const router = express.Router();
 
+/**
+ * Configure multer for file upload handling
+ * Stores files in memory temporarily and limits file size to 5MB
+ */
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-      fileSize: 5 * 1024 * 1024 // Example: 5MB limit
+      fileSize: 5 * 1024 * 1024 // 5MB limit
     }
-  });
-  // Endpoint to upload image to Supabase .ex user profile
-  router.post('/upload', upload.single('file'), async (req, res) => {
+});
+
+/**
+ * @route POST /upload
+ * @description Upload a profile picture and update user profile
+ * @access Private - Requires valid JWT token
+ * 
+ * @bodyParam {File} file - Image file to upload (multipart/form-data)
+ * 
+ * @returns {Object} 200 - Successfully uploaded image with public URL
+ * @returns {Object} 400 - No file uploaded or invalid file
+ * @returns {Object} 401 - Invalid or missing token
+ * @returns {Object} 500 - Server or storage error
+ */
+router.post('/upload', upload.single('file'), async (req, res) => {
     console.log('Upload request received');
   
+    // Validate file presence
     if (!req.file) {
       console.log('No file received in request');
       return res.status(400).json({ error: 'No file uploaded' });
     }
   
     try {
+      // Log file details for debugging
       console.log('File details:', {
         originalName: req.file.originalname,
         size: req.file.size,
@@ -29,8 +47,7 @@ const upload = multer({
         buffer: req.file.buffer ? 'Buffer present' : 'No buffer'
       });
   
-      
-      // Get and verify token
+      // Authentication verification
       const authHeader = req.headers.authorization;
       console.log('Auth header:', authHeader);
   
@@ -40,14 +57,8 @@ const upload = multer({
       }
   
       const token = authHeader.split(' ')[1];
-      console.log('Token extracted:', token ? token.substring(0, 20) + '...' : 'null');
-  
-      if (!token) {
-        console.log('No token found after Bearer');
-        return res.status(401).json({ error: 'No token provided' });
-      }
-  
-      // Decode token
+      
+      // Token validation
       let decodedToken;
       try {
         decodedToken = jwt.verify(token, secret);
@@ -68,10 +79,8 @@ const upload = multer({
       }
   
       const userId = decodedToken.userId;
-      console.log('User ID from token:', userId);
-  
-      // Check for existing profile picture
-      console.log('Checking for existing profile picture...');
+      
+      // Check for and handle existing profile picture
       const { data: user, error: userError } = await supabase
         .from('user_profile')
         .select('profile_picture_url')
@@ -80,32 +89,24 @@ const upload = multer({
   
       if (userError) {
         console.error('Error fetching user profile:', userError);
-      } else {
-        console.log('Current profile picture URL:', user?.profile_picture_url);
       }
   
-      // Delete old picture if exists
+      // Delete old profile picture if it exists
       if (user?.profile_picture_url) {
         const oldFilePath = user.profile_picture_url.split('/').pop();
-        console.log('Attempting to delete old profile picture:', oldFilePath);
-        
         const { error: deleteError } = await supabase.storage
           .from('profile-pictures')
           .remove([oldFilePath]);
   
         if (deleteError) {
           console.error('Error deleting old profile picture:', deleteError);
-        } else {
-          console.log('Old profile picture deleted successfully');
         }
       }
   
-      // Upload new picture
+      // Upload new profile picture
       const fileExtension = req.file.originalname.split('.').pop();
       const filePath = `${userId}.${fileExtension}`;
-      console.log('New file path:', filePath);
-  
-      console.log('Attempting to upload new profile picture...');
+      
       const { data, error: uploadError } = await supabase.storage
         .from('profile-pictures')
         .upload(filePath, req.file.buffer, {
@@ -121,9 +122,7 @@ const upload = multer({
         });
       }
   
-      console.log('Upload successful:', data);
-  
-      // Get public URL
+      // Get public URL for uploaded file
       const { data: { publicUrl }, error: urlError } = supabase.storage
         .from('profile-pictures')
         .getPublicUrl(filePath);
@@ -133,10 +132,7 @@ const upload = multer({
         return res.status(500).json({ error: 'Failed to get public URL' });
       }
   
-      console.log('Generated public URL:', publicUrl);
-  
-      // Update user profile with new URL
-      console.log('Updating user profile with new URL...');
+      // Update user profile with new picture URL
       const { error: updateError } = await supabase
         .from('user_profile')
         .update({ profile_picture_url: publicUrl })
@@ -147,7 +143,6 @@ const upload = multer({
         return res.status(500).json({ error: 'Failed to update profile URL' });
       }
   
-      console.log('Profile picture update complete');
       res.json({ url: publicUrl });
   
     } catch (err) {
@@ -161,6 +156,6 @@ const upload = multer({
         details: err.message 
       });
     }
-  });
+});
 
-  export default router;
+export default router;

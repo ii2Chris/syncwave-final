@@ -7,18 +7,35 @@ import { v4 as uuidv4 } from 'uuid'
 const { supabase, secret } = supabaseClient;
 const router = express.Router();
 
-// Function to generate JWT
+/**
+ * Generates a JWT token for user authentication
+ * @param {Object} user - User object containing id and email
+ * @returns {string} JWT token
+ */
 function generateAccessToken(user) {
   return jwt.sign({ userId: user.id, email: user.email }, secret, { expiresIn: '24h' });
 }
 
-
-// Signup route
+/**
+ * @route POST /auth/signup
+ * @description Register a new user
+ * @access Public
+ * 
+ * @bodyParam {string} username - Unique username
+ * @bodyParam {string} email - User's email address
+ * @bodyParam {string} dateOfBirth - User's date of birth
+ * @bodyParam {string} phoneNumber - User's phone number
+ * @bodyParam {string} password - User's password
+ * 
+ * @returns {Object} 201 - Account created successfully
+ * @returns {Object} 400 - Validation error (email/username/phone already exists)
+ * @returns {Object} 500 - Server error
+ */
 router.post('/signup', async (req, res) => {
   const { username, email, dateOfBirth, phoneNumber, password } = req.body
 
   try {
-    // Check if user already exists
+    // Check if user already exists by email, username, or phone number
     const { data: existingUser, error: searchError } = await supabase
       .from('user_profile')
       .select('email, username, phone_number')
@@ -29,26 +46,29 @@ router.post('/signup', async (req, res) => {
       console.error('Search error:', searchError)
     }
 
+    // Validate unique email
     if (existingUser?.email === email) {
       console.error('Signup failed: Email already exists')
       return res.status(400).json({ message: 'Email already registered' })
     }
 
+    // Validate unique username
     if (existingUser?.username === username) {
       console.error('Signup failed: Username already exists')
       return res.status(400).json({ message: 'Username already taken' })
     }
 
+    // Validate unique phone number
     if (existingUser?.phone_number === phoneNumber) {
       console.error('Signup failed: Phone number already exists')
       return res.status(400).json({ message: 'Phone number already registered' })
     }
 
-    // Hash password
+    // Hash password for security
     const saltRounds = 10
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Create new user
+    // Create new user profile
     const { data: newUser, error } = await supabase
       .from('user_profile')
       .insert([
@@ -59,7 +79,7 @@ router.post('/signup', async (req, res) => {
           encrypted_password: hashedPassword,
           phone_number: parseInt(phoneNumber.replace(/\D/g, '')), // Convert phone to bigint
           rating: 1,
-          about_me: 'i just started using certgram', // Using default from schema
+          about_me: 'i just started using certgram', // Default bio
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -101,15 +121,30 @@ router.post('/signup', async (req, res) => {
   }
 })
 
-// Login route
+/**
+ * @route POST /auth/login
+ * @description Authenticate user and return token
+ * @access Public
+ * 
+ * @bodyParam {string} email - User's email address
+ * @bodyParam {string} password - User's password
+ * 
+ * @returns {Object} 200 - Login successful with token
+ * @returns {Object} 400 - Missing credentials
+ * @returns {Object} 401 - Invalid credentials
+ * @returns {Object} 404 - User not found
+ * @returns {Object} 500 - Server error
+ */
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
+  // Validate required fields
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
   }
 
   try {
+    // Find user by email
     const { data: user, error } = await supabase
       .from('user_profile')
       .select('id, email, encrypted_password, username')
@@ -121,6 +156,7 @@ router.post('/login', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.encrypted_password);
 
     if (!isPasswordValid) {
@@ -128,9 +164,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    // Generate authentication token
     const token = generateAccessToken(user);
     
-    // Update session token and last login
+    // Update user's session token and last login timestamp
     const { error: updateError } = await supabase
       .from('user_profile')
       .update({
@@ -144,6 +181,7 @@ router.post('/login', async (req, res) => {
       return res.status(500).json({ error: 'Failed to update session token.' });
     }
 
+    // Return success response with token and user data
     res.status(200).json({
       message: 'Login successful',
       token,
@@ -160,9 +198,19 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Get user profile
+/**
+ * @route GET /auth/profile
+ * @description Get user profile information
+ * @access Private - Requires valid JWT token
+ * 
+ * @returns {Object} 200 - User profile data
+ * @returns {Object} 401 - Invalid or missing token
+ * @returns {Object} 404 - User not found
+ * @returns {Object} 500 - Server error
+ */
 router.get('/profile', async (req, res) => {
   try {
+    // Extract and validate JWT token
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ error: 'Authorization token is missing' });
@@ -175,7 +223,7 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Get user profile from database
+    // Fetch user profile data
     const { data: user, error } = await supabase
       .from('user_profile')
       .select(`
@@ -200,6 +248,7 @@ router.get('/profile', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    // Return user profile data
     res.json({
       id: user.id,
       username: user.username,
@@ -217,9 +266,23 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-// Update user profile
+/**
+ * @route PATCH /auth/profile
+ * @description Update user profile information
+ * @access Private - Requires valid JWT token
+ * 
+ * @bodyParam {string} [about_me] - User's bio
+ * @bodyParam {string[]} [interests] - User's interests
+ * @bodyParam {string[]} [favourite_artist] - User's favorite artists
+ * @bodyParam {string} [gender] - User's gender
+ * 
+ * @returns {Object} 200 - Updated profile data
+ * @returns {Object} 401 - Invalid or missing token
+ * @returns {Object} 500 - Server error
+ */
 router.patch('/profile', async (req, res) => {
   try {
+    // Extract and validate JWT token
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ error: 'Authorization token is missing' });
@@ -232,6 +295,7 @@ router.patch('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
+    // Prepare update data
     const updateData = {};
     const allowedFields = ['about_me', 'interests', 'favourite_artist', 'gender'];
     
@@ -247,6 +311,7 @@ router.patch('/profile', async (req, res) => {
       }
     }
 
+    // Update user profile
     const { data: user, error } = await supabase
       .from('user_profile')
       .update(updateData)
@@ -259,6 +324,7 @@ router.patch('/profile', async (req, res) => {
       return res.status(500).json({ error: 'Failed to update profile' });
     }
 
+    // Return updated profile data
     res.json({
       message: 'Profile updated successfully',
       user: {
@@ -279,8 +345,17 @@ router.patch('/profile', async (req, res) => {
   }
 });
 
+/**
+ * @route GET /auth/verify
+ * @description Verify JWT token and return user data
+ * @access Public
+ * 
+ * @returns {Object} 200 - Token is valid with user data
+ * @returns {Object} 401 - Invalid or missing token
+ */
 router.get('/verify', async (req, res) => {
   try {
+    // Extract and validate token
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
@@ -300,6 +375,7 @@ router.get('/verify', async (req, res) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
+    // Return verification success
     res.status(200).json({ 
       verified: true, 
       user: {
