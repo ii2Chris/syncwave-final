@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Avatar, Grid, Chip, Button } from '@mui/material';
+import { Box, Typography, Avatar, Grid, Chip, Button, Snackbar, Alert } from '@mui/material';
 import { motion } from 'framer-motion';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -9,6 +9,7 @@ import axios from 'axios';
 const EventsDisplay = ({ events }) => {
   const navigate = useNavigate();
   const [matchmakingStatus, setMatchmakingStatus] = useState({});
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
   const handleMatchmaking = async (eventId) => {
     try {
@@ -35,22 +36,52 @@ const EventsDisplay = ({ events }) => {
           [eventId]: true
         }));
       }
-
     } catch (error) {
+      console.error('Matchmaking error:', error);
       if (error.response?.status === 400) {
         console.log('Already in matchmaking pool');
         setMatchmakingStatus(prev => ({
           ...prev,
           [eventId]: true
         }));
-      } else {
-        console.error('Error joining matchmaking:', error.response?.data?.error || error.message);
       }
     }
   };
 
-  const handleStartSwiping = (eventId) => {
-    navigate(`/swipe/${eventId}`);
+  const handleStartSwiping = async (eventId) => {
+    try {
+      // Check if there are potential matches before navigating
+      const response = await axios.get(
+        `http://localhost:5000/matchmaking/potential-matches/${eventId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+
+      if (response.data.matches && response.data.matches.length > 0) {
+        navigate(`/swipe/${eventId}`);
+      } else {
+        // Show snackbar if no matches available
+        setSnackbar({
+          open: true,
+          message: 'No new matches available for this event. Try again later!',
+          severity: 'info'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking matches:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error checking for matches. Please try again.',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   if (!events || !events._embedded || !events._embedded.events) {
@@ -180,6 +211,22 @@ const EventsDisplay = ({ events }) => {
           );
         })}
       </Grid>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
